@@ -10,8 +10,8 @@
   }
   * { box-sizing: border-box; }
   body { font-family: Arial, sans-serif; background: var(--gray-bg); margin: 0; color: #1A2E4A; }
-  .banner { width: 100%; max-height: 260px; overflow: hidden; background: var(--navy); text-align: center; }
-  .banner img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+  .banner { width: 100%; max-height: 420px; overflow: hidden; background: var(--navy); text-align: center; }
+  .banner img { width: 100%; max-height: 420px; object-fit: contain; display: block; margin: 0 auto; }
   header { background: var(--navy); color: white; padding: 18px 24px; border-bottom: 4px solid var(--gold); }
   header h1 { margin: 0; font-size: 1.4rem; }
   header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.85; }
@@ -48,10 +48,36 @@
   .summary-box .label { font-size: 0.75rem; color: var(--navy-light); font-weight: bold; }
   .summary-box .value { font-size: 1.3rem; font-weight: bold; color: var(--navy); }
   .summary-box.saldo-neg .value { color: var(--red); }
+  .pm-card { background: var(--blue-pale); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .pm-card h4 { margin: 0 0 10px; color: var(--navy); font-size: 1.05rem; }
+  .pm-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+  .pm-stat { min-width: 100px; }
+  .pm-stat .label { font-size: 0.75rem; color: var(--navy-light); font-weight: bold; }
+  .pm-stat .value { font-size: 1.2rem; font-weight: bold; color: var(--navy); }
+  .pm-stat.saldo-neg .value { color: var(--red); }
   .config-warning { background: #FEF5E7; border: 1px solid var(--gold); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
   .del-btn { background: none; border: none; color: var(--red); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
   .del-btn:hover { color: #a8321f; }
+  .edit-btn { background: none; border: none; color: var(--navy-light); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+  .edit-btn:hover { color: var(--navy); }
   .hidden { display: none !important; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(26,46,74,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;
+  }
+  .modal-box {
+    background: white; border-radius: 10px; max-width: 800px; width: 100%;
+    max-height: 90vh; overflow-y: auto; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .modal-head h3 { margin: 0; color: var(--navy); }
+  .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--navy-light); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+  button.secondary {
+    background: white; color: var(--navy); border: 1px solid var(--border); padding: 10px 18px;
+    border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 12px;
+  }
+  button.secondary:hover { background: var(--gray-bg); }
 </style>
 </head>
 <body>
@@ -67,6 +93,7 @@
 <nav>
   <button class="tab-btn active" data-tab="compras">Compras</button>
   <button class="tab-btn" data-tab="ventas">Ventas</button>
+  <button class="tab-btn" data-tab="subastas">Subastas</button>
   <button class="tab-btn" data-tab="tarjetas">Tarjetas</button>
   <button class="tab-btn" data-tab="cartera">Cartera</button>
   <button class="tab-btn" data-tab="resumen">Resumen</button>
@@ -80,20 +107,36 @@
   <!-- COMPRAS -->
   <section id="tab-compras" class="tab active">
     <div class="card">
-      <h3>Nueva compra</h3>
-      <div class="form-grid">
-        <div><label>Fecha de compra</label><input type="date" id="c-fecha"></div>
-        <div><label>Estado envío</label>
-          <select id="c-envio"><option>En Tránsito</option><option>UK</option><option>Casa</option></select>
+      <button class="primary" onclick="openCompraModal()">+ Nueva compra</button>
+    </div>
+
+    <div id="compra-modal-overlay" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-head">
+          <h3 id="compra-modal-title">Nueva compra</h3>
+          <button class="modal-close" onclick="closeCompraModal()">✕</button>
         </div>
-        <div><label>Nombre Pokémon</label><input id="c-nombre" placeholder="Charizard"></div>
+        <div class="form-grid">
+        <div><label>Fecha de compra</label><input type="date" id="c-fecha" autocomplete="off"></div>
+        <div><label>Estado envío</label>
+          <select id="c-envio" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>En Tránsito</option><option>UK</option><option>Casa</option></select>
+        </div>
+        <div><label>Nombre Pokémon</label><input id="c-nombre" placeholder="Charizard" autocomplete="off"></div>
         <div><label>Tipo de carta</label>
-          <select id="c-tipo"><option>Unlimited</option><option>Holo</option><option>Reverse</option><option>FA</option><option>IR</option><option>SIR</option></select>
+          <select id="c-tipo" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Unlimited</option><option>Holo</option><option>Reverse</option><option>FA</option><option>IR</option><option>SIR</option></select>
         </div>
         <div><label>Idioma</label>
-          <select id="c-idioma"><option value="ENG">ENG</option><option value="ESP">ESP</option><option value="JAP">JAP</option><option value="CH">CH</option></select>
+          <select id="c-idioma" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option value="ENG">ENG</option><option value="ESP">ESP</option><option value="JAP">JAP</option><option value="CH">CH</option></select>
         </div>
-        <div><label>Expansión</label><select id="c-expansion">
+        <div><label>Expansión</label><select id="c-expansion" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+
 <option>Base Set (1999)</option>
 <option>Jungle (1999)</option>
 <option>Fossil (1999)</option>
@@ -223,22 +266,36 @@
 <option>Chaos Rising (2026)</option>
 <option>Pitch Black (2026)</option>
 </select></div>
-        <div><label>N° de carta</label><input id="c-numero"></div>
+        <div><label>N° de carta</label><input id="c-numero" autocomplete="off"></div>
         <div><label>Graded</label>
-          <select id="c-graded" onchange="toggleGraded()"><option value="No">No</option><option value="Si">Si</option></select>
+          <select id="c-graded" onchange="toggleGraded()" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option value="No">No</option><option value="Si">Si</option></select>
         </div>
-        <div id="c-grading-fields" class="hidden"><label>Calificación</label><input id="c-calificacion" placeholder="10, 9.5..."></div>
+        <div id="c-grading-fields" class="hidden"><label>Calificación</label><input id="c-calificacion" placeholder="10, 9.5..." autocomplete="off"></div>
         <div id="c-empresa-fields" class="hidden">
           <label>Empresa gradeadora</label>
-          <select id="c-empresa"><option>PSA</option><option>Becket</option><option>CGC</option><option>TAG</option></select>
+          <select id="c-empresa" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>PSA</option><option>Becket</option><option>CGC</option><option>TAG</option></select>
         </div>
-        <div><label>Precio de compra (USD)</label><input type="number" id="c-precio" step="0.01"></div>
+        <div><label>Precio de compra (USD)</label><input type="number" id="c-precio" step="0.01" autocomplete="off"></div>
         <div><label>Pago con</label>
-          <select id="c-pagocon"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select>
+          <select id="c-pagocon" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select>
         </div>
-        <div><label>Canal de compra</label><input id="c-canal" placeholder="EBAY"></div>
+        <div><label>Canal de compra</label><input id="c-canal" placeholder="EBAY" autocomplete="off"></div>
       </div>
-      <button class="primary" id="btn-compra" onclick="addCompra()">Guardar compra</button>
+        <div class="modal-actions">
+          <button class="primary" id="btn-compra" onclick="addCompra()">Guardar compra</button>
+          <button class="secondary" onclick="closeCompraModal()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Buscar carta</h3>
+      <input id="c-buscar" placeholder="Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
     </div>
     <div class="card">
       <h3>Listado de compras</h3>
@@ -254,19 +311,51 @@
     <div class="card">
       <h3>Nueva venta</h3>
       <div class="form-grid">
-        <div><label>Fecha de venta</label><input type="date" id="s-fecha"></div>
-        <div><label>Código (de Compras)</label><input id="s-codigo" placeholder="C-001"></div>
-        <div><label>Canal</label><select id="s-canal"><option>Subasta WhatsApp</option><option>Instagram Directa</option></select></div>
-        <div><label>Comprador</label><input id="s-comprador"></div>
-        <div><label>Precio final (USD)</label><input type="number" id="s-precio" step="0.01"></div>
-        <div><label>Notas</label><input id="s-notas"></div>
+        <div><label>Fecha de venta</label><input type="date" id="s-fecha" autocomplete="off"></div>
+        <div>
+          <label>Código (de Compras)</label>
+          <input id="s-codigo" placeholder="C-001" autocomplete="off" oninput="previewVentaCodigo()">
+        </div>
+        <div><label>Canal</label><select id="s-canal" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Subasta WhatsApp</option><option>Instagram Directa</option></select></div>
+        <div><label>Evento de subasta (opcional)</label>
+          <select id="s-evento" autocomplete="off"><option value="">Venta directa (sin evento)</option></select>
+        </div>
+        <div><label>Comprador</label><input id="s-comprador" autocomplete="off"></div>
+        <div><label>Precio final (USD)</label><input type="number" id="s-precio" step="0.01" autocomplete="off"></div>
+        <div><label>Notas</label><input id="s-notas" autocomplete="off"></div>
       </div>
+      <div id="s-preview" style="font-size:0.85rem;color:var(--navy-light);margin-top:8px"></div>
       <button class="primary" id="btn-venta" onclick="addVenta()">Guardar venta</button>
     </div>
     <div class="card">
       <h3>Listado de ventas</h3>
       <div class="table-wrap"><table id="tabla-ventas"><thead><tr>
-        <th></th><th>Fecha</th><th>Código</th><th>Canal</th><th>Comprador</th><th>Precio (USD)</th><th>Notas</th>
+        <th></th><th>Fecha</th><th>Código</th><th>Pokémon</th><th>Expansión</th><th>Canal</th><th>Evento</th><th>Comprador</th><th>Precio (USD)</th><th>Notas</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- SUBASTAS (eventos) -->
+  <section id="tab-subastas" class="tab">
+    <div class="card">
+      <h3>Nueva subasta</h3>
+      <div class="form-grid">
+        <div><label>Fecha de la subasta</label><input type="date" id="ev-fecha" autocomplete="off"></div>
+        <div><label>Nombre de la subasta</label><input id="ev-nombre" placeholder="Subasta #12" autocomplete="off"></div>
+        <div><label>Notas</label><input id="ev-notas" autocomplete="off"></div>
+      </div>
+      <button class="primary" id="btn-evento" onclick="addEvento()">Guardar subasta</button>
+    </div>
+    <div class="card">
+      <h3>Listado de subastas</h3>
+      <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
+        La rentabilidad se calcula sola con las ventas que marques con este evento en la solapa Ventas.
+      </p>
+      <div class="table-wrap"><table id="tabla-subastas-eventos"><thead><tr>
+        <th></th><th>Fecha</th><th>Nombre</th><th>Notas</th><th>Cartas vendidas</th>
+        <th>Ingreso (USD)</th><th>Costo (USD)</th><th>Rentab. (USD)</th><th>Rentab. %</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -275,15 +364,17 @@
   <section id="tab-tarjetas" class="tab">
     <div class="card">
       <h3>Saldo por medio de pago</h3>
-      <div id="tarjetas-summary" class="summary-grid"></div>
+      <div id="tarjetas-summary" class="pm-list"></div>
     </div>
     <div class="card">
       <h3>Registrar pago</h3>
       <div class="form-grid">
-        <div><label>Fecha de pago</label><input type="date" id="p-fecha"></div>
-        <div><label>Pago con</label><select id="p-tarjeta"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select></div>
-        <div><label>Monto pagado (USD)</label><input type="number" id="p-monto" step="0.01"></div>
-        <div><label>Notas</label><input id="p-notas"></div>
+        <div><label>Fecha de pago</label><input type="date" id="p-fecha" autocomplete="off"></div>
+        <div><label>Pago con</label><select id="p-tarjeta" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select></div>
+        <div><label>Monto pagado (USD)</label><input type="number" id="p-monto" step="0.01" autocomplete="off"></div>
+        <div><label>Notas</label><input id="p-notas" autocomplete="off"></div>
       </div>
       <button class="primary" id="btn-pago" onclick="addPago()">Guardar pago</button>
     </div>
@@ -308,11 +399,15 @@
       <h3>Nuevo ítem de cartera</h3>
       <div class="form-grid">
         <div><label>Categoría</label>
-          <select id="ca-cat"><option>Producto Sellado</option><option>Carta Gradeada</option><option>Carta Valiosa (No Gradeada)</option></select>
+          <select id="ca-cat" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Producto Sellado</option><option>Carta Gradeada</option><option>Carta Valiosa (No Gradeada)</option></select>
         </div>
-        <div><label>Fecha de compra</label><input type="date" id="ca-fecha"></div>
-        <div><label>Nombre / Producto</label><input id="ca-nombre"></div>
-        <div><label>Expansión</label><select id="ca-expansion">
+        <div><label>Fecha de compra</label><input type="date" id="ca-fecha" autocomplete="off"></div>
+        <div><label>Nombre / Producto</label><input id="ca-nombre" autocomplete="off"></div>
+        <div><label>Expansión</label><select id="ca-expansion" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+
 <option>Base Set (1999)</option>
 <option>Jungle (1999)</option>
 <option>Fossil (1999)</option>
@@ -442,11 +537,13 @@
 <option>Chaos Rising (2026)</option>
 <option>Pitch Black (2026)</option>
 </select></div>
-        <div><label>Cantidad</label><input type="number" id="ca-cantidad" value="1"></div>
-        <div><label>Grading / Estado</label><input id="ca-grading" placeholder="PSA 10 / Booster Box..."></div>
-        <div><label>Precio de compra (USD)</label><input type="number" id="ca-precio" step="0.01"></div>
-        <div><label>Precio actual (USD)</label><input type="number" id="ca-precioactual" step="0.01"></div>
-        <div><label>Pago con</label><select id="ca-pagocon"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select></div>
+        <div><label>Cantidad</label><input type="number" id="ca-cantidad" value="1" autocomplete="off"></div>
+        <div><label>Grading / Estado</label><input id="ca-grading" placeholder="PSA 10 / Booster Box..." autocomplete="off"></div>
+        <div><label>Precio de compra (USD)</label><input type="number" id="ca-precio" step="0.01" autocomplete="off"></div>
+        <div><label>Precio actual (USD)</label><input type="number" id="ca-precioactual" step="0.01" autocomplete="off"></div>
+        <div><label>Pago con</label><select id="ca-pagocon" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select></div>
       </div>
       <button class="primary" id="btn-cartera" onclick="addCartera()">Guardar ítem</button>
     </div>
@@ -476,8 +573,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbx6rnsDN2YXlTPLcdCl4Dmjn2sLlhPuZ-Zygbe_eqbXsGY4izYFLBiE9d3AS0lcbNeN/exec";
 /* ============================== */
 
-let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [] };
-const CARDS = ["Marian UK", "Costi MasterCard", "EFT"];
+let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [], SubastasEventos: [] };
+const CARDS = ["Marian UK", "Costi MasterCard", "Costi Platinum", "EFT"];
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -494,6 +591,52 @@ function toggleGraded() {
   const isGraded = document.getElementById("c-graded").value === "Si";
   document.getElementById("c-grading-fields").classList.toggle("hidden", !isGraded);
   document.getElementById("c-empresa-fields").classList.toggle("hidden", !isGraded);
+}
+
+const COMPRA_SELECT_IDS = ["c-envio","c-tipo","c-idioma","c-expansion","c-graded","c-empresa","c-pagocon"];
+const COMPRA_INPUT_IDS = ["c-fecha","c-nombre","c-numero","c-calificacion","c-precio","c-canal"];
+
+function resetCompraForm() {
+  COMPRA_INPUT_IDS.forEach(i => document.getElementById(i).value = "");
+  COMPRA_SELECT_IDS.forEach(i => document.getElementById(i).value = "");
+  document.getElementById("c-grading-fields").classList.add("hidden");
+  document.getElementById("c-empresa-fields").classList.add("hidden");
+}
+
+let editingCompraId = null;
+
+function openCompraModal() {
+  editingCompraId = null;
+  resetCompraForm();
+  document.getElementById("compra-modal-title").textContent = "Nueva compra";
+  document.getElementById("compra-modal-overlay").classList.remove("hidden");
+}
+function closeCompraModal() {
+  editingCompraId = null;
+  document.getElementById("compra-modal-overlay").classList.add("hidden");
+}
+
+function editCompra(id) {
+  const c = DATA.Compras.find(x => x.ID === id);
+  if (!c) return;
+  resetCompraForm();
+  editingCompraId = id;
+  document.getElementById("compra-modal-title").textContent = "Editar compra";
+  document.getElementById("c-fecha").value = c.FechaCompra || "";
+  document.getElementById("c-envio").value = c.EstadoEnvio || "";
+  document.getElementById("c-nombre").value = c.NombrePokemon || "";
+  document.getElementById("c-tipo").value = c.TipoCarta || "";
+  document.getElementById("c-idioma").value = c.Idioma || "";
+  document.getElementById("c-expansion").value = c.Expansion || "";
+  document.getElementById("c-numero").value = c.NumeroCarta || "";
+  document.getElementById("c-graded").value = c.Graded || "";
+  document.getElementById("c-calificacion").value = c.Calificacion || "";
+  document.getElementById("c-empresa").value = c.EmpresaGradeadora || "";
+  document.getElementById("c-precio").value = c.PrecioCompra || "";
+  document.getElementById("c-pagocon").value = c.Tarjeta || "";
+  document.getElementById("c-canal").value = c.CanalCompra || "";
+  toggleGraded();
+  document.getElementById("compra-modal-overlay").classList.remove("hidden");
 }
 
 function checkConfig() {
@@ -515,16 +658,17 @@ async function postSheet(sheet, action, data, id) {
 
 async function loadAll() {
   if (!checkConfig()) return;
-  const [compras, cartera, subastas, pagos] = await Promise.all([
-    fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos")
+  const [compras, cartera, subastas, pagos, eventos] = await Promise.all([
+    fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos"), fetchSheet("SubastasEventos")
   ]);
   DATA.Compras = compras.error ? [] : compras;
   DATA.Cartera = cartera.error ? [] : cartera;
   DATA.Subastas = subastas.error ? [] : subastas;
   DATA.Pagos = pagos.error ? [] : pagos;
+  DATA.SubastasEventos = eventos.error ? [] : eventos;
   renderAll();
 }
-function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); }
+function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderEventos(); }
 function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }
 function findVenta(codigo) { return DATA.Subastas.find(s => s.Codigo === codigo); }
 function setBusy(btnId, busy, label) {
@@ -533,8 +677,9 @@ function setBusy(btnId, busy, label) {
 
 /* ---------- COMPRAS ---------- */
 async function addCompra() {
-  const id = newId();
-  const codigo = nextCode("C", DATA.Compras);
+  const isEdit = !!editingCompraId;
+  const id = isEdit ? editingCompraId : newId();
+  const codigo = isEdit ? DATA.Compras.find(c => c.ID === id).Codigo : nextCode("C", DATA.Compras);
   const data = {
     ID: id, Codigo: codigo,
     FechaCompra: document.getElementById("c-fecha").value,
@@ -551,13 +696,18 @@ async function addCompra() {
     Tarjeta: document.getElementById("c-pagocon").value,
     CanalCompra: document.getElementById("c-canal").value
   };
-  DATA.Compras.push(data);
+
+  if (isEdit) {
+    const idx = DATA.Compras.findIndex(c => c.ID === id);
+    if (idx !== -1) DATA.Compras[idx] = data;
+  } else {
+    DATA.Compras.push(data);
+  }
   renderCompras(); renderResumen(); renderTarjetas();
-  ["c-nombre","c-numero","c-calificacion","c-precio","c-canal"].forEach(i => document.getElementById(i).value = "");
-  document.getElementById("c-graded").value = "No"; toggleGraded();
+  closeCompraModal();
 
   setBusy("btn-compra", true, "Guardar compra");
-  await postSheet("Compras", "add", data);
+  await postSheet("Compras", isEdit ? "update" : "add", data, isEdit ? id : undefined);
   DATA.Compras = await fetchSheet("Compras");
   renderCompras(); renderResumen(); renderTarjetas();
   setBusy("btn-compra", false, "Guardar compra");
@@ -575,7 +725,11 @@ async function deleteCompra(id) {
 function renderCompras() {
   const tbody = document.querySelector("#tabla-compras tbody");
   tbody.innerHTML = "";
-  DATA.Compras.forEach(c => {
+  const q = (document.getElementById("c-buscar")?.value || "").toLowerCase().trim();
+  const lista = q
+    ? DATA.Compras.filter(c => (c.NombrePokemon||"").toLowerCase().includes(q) || (c.Expansion||"").toLowerCase().includes(q) || (c.Codigo||"").toLowerCase().includes(q))
+    : DATA.Compras;
+  lista.forEach(c => {
     const venta = findVenta(c.Codigo);
     const estado = venta ? "Vendido" : "Disponible";
     const compra = parseFloat(c.PrecioCompra) || 0;
@@ -584,7 +738,7 @@ function renderCompras() {
     const rentabPct = venta && compra ? ((precioVenta - compra) / compra * 100) : null;
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
-      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button>` : ""}</td>
+      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button>` : ""}</td>
       <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
       <td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td><td>${c.CanalCompra||""}</td>
@@ -658,6 +812,21 @@ function renderCartera() {
 }
 
 /* ---------- VENTAS (hoja backend: Subastas) ---------- */
+function findCompraPorCodigo(codigo) {
+  return DATA.Compras.find(c => c.Codigo === codigo);
+}
+
+function previewVentaCodigo() {
+  const codigo = document.getElementById("s-codigo").value.trim();
+  const div = document.getElementById("s-preview");
+  if (!codigo) { div.textContent = ""; return; }
+  const c = findCompraPorCodigo(codigo);
+  if (!c) { div.textContent = "No se encontró ninguna compra con ese código."; return; }
+  const yaVendida = findVenta(codigo);
+  div.textContent = `${c.NombrePokemon || ""} — ${c.Expansion || ""} (comprada a $${Number(c.PrecioCompra||0).toFixed(2)})`
+    + (yaVendida ? " ⚠️ Este código ya tiene una venta registrada." : "");
+}
+
 async function addVenta() {
   const id = newId();
   const data = {
@@ -667,11 +836,13 @@ async function addVenta() {
     CanalVenta: document.getElementById("s-canal").value,
     Comprador: document.getElementById("s-comprador").value,
     PrecioVenta: parseFloat(document.getElementById("s-precio").value) || 0,
-    Notas: document.getElementById("s-notas").value
+    Notas: document.getElementById("s-notas").value,
+    EventoID: document.getElementById("s-evento").value
   };
   DATA.Subastas.push(data);
   renderAll();
   ["s-codigo","s-comprador","s-precio","s-notas"].forEach(i => document.getElementById(i).value = "");
+  document.getElementById("s-preview").textContent = "";
 
   setBusy("btn-venta", true, "Guardar venta");
   await postSheet("Subastas", "add", data);
@@ -690,13 +861,76 @@ async function deleteVenta(id) {
 }
 
 function renderVentas() {
+  // Repoblar el desplegable de eventos con lo que haya cargado hasta ahora
+  const evSelect = document.getElementById("s-evento");
+  const current = evSelect.value;
+  evSelect.innerHTML = '<option value="">Venta directa (sin evento)</option>' +
+    DATA.SubastasEventos.map(ev => `<option value="${ev.ID}">${ev.Nombre} (${ev.Fecha||""})</option>`).join("");
+  evSelect.value = current || "";
+
   const tbody = document.querySelector("#tabla-ventas tbody");
   tbody.innerHTML = "";
   DATA.Subastas.forEach(s => {
+    const c = findCompraPorCodigo(s.Codigo);
+    const evento = DATA.SubastasEventos.find(ev => ev.ID === s.EventoID);
     tbody.innerHTML += `<tr>
       <td>${s.ID ? `<button class="del-btn" onclick="deleteVenta('${s.ID}')">✕</button>` : ""}</td>
-      <td>${s.FechaVenta||""}</td><td>${s.Codigo||""}</td><td>${s.CanalVenta||""}</td>
+      <td>${s.FechaVenta||""}</td><td>${s.Codigo||""}</td>
+      <td>${c ? c.NombrePokemon : ""}</td><td>${c ? c.Expansion : ""}</td>
+      <td>${s.CanalVenta||""}</td><td>${evento ? evento.Nombre : ""}</td>
       <td>${s.Comprador||""}</td><td>$${Number(s.PrecioVenta||0).toFixed(2)}</td><td>${s.Notas||""}</td>
+    </tr>`;
+  });
+}
+
+/* ---------- SUBASTAS (eventos con rentabilidad) ---------- */
+async function addEvento() {
+  const id = newId();
+  const data = {
+    ID: id,
+    Fecha: document.getElementById("ev-fecha").value,
+    Nombre: document.getElementById("ev-nombre").value,
+    Notas: document.getElementById("ev-notas").value
+  };
+  DATA.SubastasEventos.push(data);
+  renderEventos(); renderVentas();
+  ["ev-fecha","ev-nombre","ev-notas"].forEach(i => document.getElementById(i).value = "");
+
+  setBusy("btn-evento", true, "Guardar subasta");
+  await postSheet("SubastasEventos", "add", data);
+  DATA.SubastasEventos = await fetchSheet("SubastasEventos");
+  renderEventos(); renderVentas();
+  setBusy("btn-evento", false, "Guardar subasta");
+}
+
+async function deleteEvento(id) {
+  if (!confirm("¿Borrar esta subasta? Las ventas que tenía asignadas no se borran, solo quedan sin evento.")) return;
+  DATA.SubastasEventos = DATA.SubastasEventos.filter(e => e.ID !== id);
+  renderEventos(); renderVentas();
+  await postSheet("SubastasEventos", "delete", null, id);
+  DATA.SubastasEventos = await fetchSheet("SubastasEventos");
+  renderEventos(); renderVentas();
+}
+
+function renderEventos() {
+  const tbody = document.querySelector("#tabla-subastas-eventos tbody");
+  tbody.innerHTML = "";
+  DATA.SubastasEventos.forEach(ev => {
+    const ventas = DATA.Subastas.filter(s => s.EventoID === ev.ID);
+    let ingreso = 0, costo = 0;
+    ventas.forEach(v => {
+      ingreso += parseFloat(v.PrecioVenta) || 0;
+      const c = findCompraPorCodigo(v.Codigo);
+      costo += c ? (parseFloat(c.PrecioCompra) || 0) : 0;
+    });
+    const rentabUsd = ingreso - costo;
+    const rentabPct = costo ? (rentabUsd / costo * 100) : null;
+    tbody.innerHTML += `<tr>
+      <td>${ev.ID ? `<button class="del-btn" onclick="deleteEvento('${ev.ID}')">✕</button>` : ""}</td>
+      <td>${ev.Fecha||""}</td><td>${ev.Nombre||""}</td><td>${ev.Notas||""}</td>
+      <td>${ventas.length}</td>
+      <td>$${ingreso.toFixed(2)}</td><td>$${costo.toFixed(2)}</td>
+      <td>$${rentabUsd.toFixed(2)}</td><td>${rentabPct!==null ? rentabPct.toFixed(1)+"%" : ""}</td>
     </tr>`;
   });
 }
@@ -749,9 +983,14 @@ function renderTarjetas() {
     const pagado = DATA.Pagos.filter(p => p.Tarjeta === card).reduce((a,p)=>a+(parseFloat(p.Monto)||0),0);
     const saldo = gastado - pagado;
     html += `
-      <div class="summary-box"><div class="label">${card} — Gastado</div><div class="value">$${gastado.toFixed(2)}</div></div>
-      <div class="summary-box"><div class="label">${card} — Pagado</div><div class="value">$${pagado.toFixed(2)}</div></div>
-      <div class="summary-box ${saldo>0?'saldo-neg':''}"><div class="label">${card} — Saldo</div><div class="value">$${saldo.toFixed(2)}</div></div>
+      <div class="pm-card">
+        <h4>${card}</h4>
+        <div class="pm-stats">
+          <div class="pm-stat"><div class="label">Gastado</div><div class="value">$${gastado.toFixed(2)}</div></div>
+          <div class="pm-stat"><div class="label">Pagado</div><div class="value">$${pagado.toFixed(2)}</div></div>
+          <div class="pm-stat ${saldo>0?'saldo-neg':''}"><div class="label">Saldo</div><div class="value">$${saldo.toFixed(2)}</div></div>
+        </div>
+      </div>
     `;
   });
   div.innerHTML = html;

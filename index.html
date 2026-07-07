@@ -728,7 +728,6 @@ function showAppWarning(msg) {
   div.textContent = "⚠️ " + msg;
   div.style.display = "block";
 }
-}
 function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderEventos(); }
 function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }
 function findVenta(codigo) { return DATA.Subastas.find(s => s.Codigo === codigo); }

@@ -10,6 +10,8 @@
   }
   * { box-sizing: border-box; }
   body { font-family: Arial, sans-serif; background: var(--gray-bg); margin: 0; color: #1A2E4A; }
+  .banner { width: 100%; max-height: 260px; overflow: hidden; background: var(--navy); text-align: center; }
+  .banner img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
   header { background: var(--navy); color: white; padding: 18px 24px; border-bottom: 4px solid var(--gold); }
   header h1 { margin: 0; font-size: 1.4rem; }
   header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.85; }
@@ -54,6 +56,9 @@
 </head>
 <body>
 
+<div class="banner">
+  <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
+</div>
 <header>
   <h1>CRM POKÉMON</h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
@@ -79,7 +84,7 @@
       <div class="form-grid">
         <div><label>Fecha de compra</label><input type="date" id="c-fecha"></div>
         <div><label>Estado envío</label>
-          <select id="c-envio"><option>Pedido</option><option>En tránsito</option><option>Recibido</option></select>
+          <select id="c-envio"><option>En Tránsito</option><option>UK</option><option>Casa</option></select>
         </div>
         <div><label>Nombre Pokémon</label><input id="c-nombre" placeholder="Charizard"></div>
         <div><label>Tipo de carta</label>
@@ -88,7 +93,136 @@
         <div><label>Idioma</label>
           <select id="c-idioma"><option value="ENG">ENG</option><option value="ESP">ESP</option><option value="JAP">JAP</option><option value="CH">CH</option></select>
         </div>
-        <div><label>Expansión</label><input id="c-expansion"></div>
+        <div><label>Expansión</label><select id="c-expansion">
+<option>Base Set (1999)</option>
+<option>Jungle (1999)</option>
+<option>Fossil (1999)</option>
+<option>Base Set 2 (2000)</option>
+<option>Team Rocket (2000)</option>
+<option>Gym Heroes (2000)</option>
+<option>Gym Challenge (2000)</option>
+<option>Neo Genesis (2000)</option>
+<option>Neo Discovery (2001)</option>
+<option>Neo Revelation (2001)</option>
+<option>Neo Destiny (2002)</option>
+<option>Legendary Collection (2002)</option>
+<option>VS (2001)</option>
+<option>Expedition Base Set (2002)</option>
+<option>Aquapolis (2003)</option>
+<option>Skyridge (2003)</option>
+<option>EX Ruby &amp; Sapphire (2003)</option>
+<option>EX Sandstorm (2003)</option>
+<option>EX Dragon (2003)</option>
+<option>EX Team Magma vs Team Aqua (2004)</option>
+<option>EX Hidden Legends (2004)</option>
+<option>EX FireRed &amp; LeafGreen (2004)</option>
+<option>EX Team Rocket Returns (2004)</option>
+<option>EX Deoxys (2005)</option>
+<option>EX Emerald (2005)</option>
+<option>EX Unseen Forces (2005)</option>
+<option>EX Delta Species (2005)</option>
+<option>EX Legend Maker (2006)</option>
+<option>EX Holon Phantoms (2006)</option>
+<option>EX Crystal Guardians (2006)</option>
+<option>EX Dragon Frontiers (2006)</option>
+<option>EX Power Keepers (2007)</option>
+<option>Diamond &amp; Pearl (2007)</option>
+<option>Mysterious Treasures (2007)</option>
+<option>Secret Wonders (2007)</option>
+<option>Great Encounters (2008)</option>
+<option>Majestic Dawn (2008)</option>
+<option>Legends Awakened (2008)</option>
+<option>Stormfront (2008)</option>
+<option>Platinum (2009)</option>
+<option>Rising Rivals (2009)</option>
+<option>Supreme Victors (2009)</option>
+<option>Arceus (2009)</option>
+<option>HeartGold &amp; SoulSilver (2010)</option>
+<option>Unleashed (2010)</option>
+<option>Undaunted (2010)</option>
+<option>Triumphant (2010)</option>
+<option>Call of Legends (2011)</option>
+<option>Black &amp; White (2011)</option>
+<option>Emerging Powers (2011)</option>
+<option>Noble Victories (2011)</option>
+<option>Next Destinies (2012)</option>
+<option>Dark Explorers (2012)</option>
+<option>Dragons Exalted (2012)</option>
+<option>Boundaries Crossed (2012)</option>
+<option>Plasma Storm (2013)</option>
+<option>Plasma Freeze (2013)</option>
+<option>Plasma Blast (2013)</option>
+<option>Legendary Treasures (2013)</option>
+<option>XY (2014)</option>
+<option>Flashfire (2014)</option>
+<option>Furious Fists (2014)</option>
+<option>Phantom Forces (2014)</option>
+<option>Primal Clash (2015)</option>
+<option>Double Crisis (2015)</option>
+<option>Roaring Skies (2015)</option>
+<option>Ancient Origins (2015)</option>
+<option>BREAKthrough (2015)</option>
+<option>BREAKpoint (2016)</option>
+<option>Generations (2016)</option>
+<option>Fates Collide (2016)</option>
+<option>Steam Siege (2016)</option>
+<option>Evolutions (2016)</option>
+<option>Sun &amp; Moon (2017)</option>
+<option>Guardians Rising (2017)</option>
+<option>Burning Shadows (2017)</option>
+<option>Shining Legends (2017)</option>
+<option>Crimson Invasion (2017)</option>
+<option>Ultra Prism (2018)</option>
+<option>Forbidden Light (2018)</option>
+<option>Celestial Storm (2018)</option>
+<option>Dragon Majesty (2018)</option>
+<option>Lost Thunder (2018)</option>
+<option>Team Up (2019)</option>
+<option>Detective Pikachu (2019)</option>
+<option>Unbroken Bonds (2019)</option>
+<option>Unified Minds (2019)</option>
+<option>Hidden Fates (2019)</option>
+<option>Cosmic Eclipse (2019)</option>
+<option>Sword &amp; Shield (2020)</option>
+<option>Rebel Clash (2020)</option>
+<option>Darkness Ablaze (2020)</option>
+<option>Champion&#x27;s Path (2020)</option>
+<option>Vivid Voltage (2020)</option>
+<option>Shining Fates (2021)</option>
+<option>Battle Styles (2021)</option>
+<option>Chilling Reign (2021)</option>
+<option>Evolving Skies (2021)</option>
+<option>Celebrations (2021)</option>
+<option>Fusion Strike (2021)</option>
+<option>Brilliant Stars (2022)</option>
+<option>Astral Radiance (2022)</option>
+<option>Pokémon GO (2022)</option>
+<option>Lost Origin (2022)</option>
+<option>Silver Tempest (2022)</option>
+<option>Crown Zenith (2023)</option>
+<option>Scarlet &amp; Violet (2023)</option>
+<option>Paldea Evolved (2023)</option>
+<option>Obsidian Flames (2023)</option>
+<option>151 (2023)</option>
+<option>Paradox Rift (2023)</option>
+<option>Paldean Fates (2024)</option>
+<option>Temporal Forces (2024)</option>
+<option>Twilight Masquerade (2024)</option>
+<option>Shrouded Fable (2024)</option>
+<option>Stellar Crown (2024)</option>
+<option>Surging Sparks (2024)</option>
+<option>Prismatic Evolutions (2025)</option>
+<option>Journey Together (2025)</option>
+<option>Destined Rivals (2025)</option>
+<option>Black Bolt (2025)</option>
+<option>White Flare (2025)</option>
+<option>Mega Evolution (2025)</option>
+<option>Phantasmal Flames (2025)</option>
+<option>Ascended Heroes (2026)</option>
+<option>Perfect Order (2026)</option>
+<option>Chaos Rising (2026)</option>
+<option>Pitch Black (2026)</option>
+</select></div>
         <div><label>N° de carta</label><input id="c-numero"></div>
         <div><label>Graded</label>
           <select id="c-graded" onchange="toggleGraded()"><option value="No">No</option><option value="Si">Si</option></select>
@@ -109,7 +243,7 @@
     <div class="card">
       <h3>Listado de compras</h3>
       <div class="table-wrap"><table id="tabla-compras"><thead><tr>
-        <th></th><th>Código</th><th>Fecha</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
+        <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
         <th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Canal</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
@@ -178,7 +312,136 @@
         </div>
         <div><label>Fecha de compra</label><input type="date" id="ca-fecha"></div>
         <div><label>Nombre / Producto</label><input id="ca-nombre"></div>
-        <div><label>Expansión</label><input id="ca-expansion"></div>
+        <div><label>Expansión</label><select id="ca-expansion">
+<option>Base Set (1999)</option>
+<option>Jungle (1999)</option>
+<option>Fossil (1999)</option>
+<option>Base Set 2 (2000)</option>
+<option>Team Rocket (2000)</option>
+<option>Gym Heroes (2000)</option>
+<option>Gym Challenge (2000)</option>
+<option>Neo Genesis (2000)</option>
+<option>Neo Discovery (2001)</option>
+<option>Neo Revelation (2001)</option>
+<option>Neo Destiny (2002)</option>
+<option>Legendary Collection (2002)</option>
+<option>VS (2001)</option>
+<option>Expedition Base Set (2002)</option>
+<option>Aquapolis (2003)</option>
+<option>Skyridge (2003)</option>
+<option>EX Ruby &amp; Sapphire (2003)</option>
+<option>EX Sandstorm (2003)</option>
+<option>EX Dragon (2003)</option>
+<option>EX Team Magma vs Team Aqua (2004)</option>
+<option>EX Hidden Legends (2004)</option>
+<option>EX FireRed &amp; LeafGreen (2004)</option>
+<option>EX Team Rocket Returns (2004)</option>
+<option>EX Deoxys (2005)</option>
+<option>EX Emerald (2005)</option>
+<option>EX Unseen Forces (2005)</option>
+<option>EX Delta Species (2005)</option>
+<option>EX Legend Maker (2006)</option>
+<option>EX Holon Phantoms (2006)</option>
+<option>EX Crystal Guardians (2006)</option>
+<option>EX Dragon Frontiers (2006)</option>
+<option>EX Power Keepers (2007)</option>
+<option>Diamond &amp; Pearl (2007)</option>
+<option>Mysterious Treasures (2007)</option>
+<option>Secret Wonders (2007)</option>
+<option>Great Encounters (2008)</option>
+<option>Majestic Dawn (2008)</option>
+<option>Legends Awakened (2008)</option>
+<option>Stormfront (2008)</option>
+<option>Platinum (2009)</option>
+<option>Rising Rivals (2009)</option>
+<option>Supreme Victors (2009)</option>
+<option>Arceus (2009)</option>
+<option>HeartGold &amp; SoulSilver (2010)</option>
+<option>Unleashed (2010)</option>
+<option>Undaunted (2010)</option>
+<option>Triumphant (2010)</option>
+<option>Call of Legends (2011)</option>
+<option>Black &amp; White (2011)</option>
+<option>Emerging Powers (2011)</option>
+<option>Noble Victories (2011)</option>
+<option>Next Destinies (2012)</option>
+<option>Dark Explorers (2012)</option>
+<option>Dragons Exalted (2012)</option>
+<option>Boundaries Crossed (2012)</option>
+<option>Plasma Storm (2013)</option>
+<option>Plasma Freeze (2013)</option>
+<option>Plasma Blast (2013)</option>
+<option>Legendary Treasures (2013)</option>
+<option>XY (2014)</option>
+<option>Flashfire (2014)</option>
+<option>Furious Fists (2014)</option>
+<option>Phantom Forces (2014)</option>
+<option>Primal Clash (2015)</option>
+<option>Double Crisis (2015)</option>
+<option>Roaring Skies (2015)</option>
+<option>Ancient Origins (2015)</option>
+<option>BREAKthrough (2015)</option>
+<option>BREAKpoint (2016)</option>
+<option>Generations (2016)</option>
+<option>Fates Collide (2016)</option>
+<option>Steam Siege (2016)</option>
+<option>Evolutions (2016)</option>
+<option>Sun &amp; Moon (2017)</option>
+<option>Guardians Rising (2017)</option>
+<option>Burning Shadows (2017)</option>
+<option>Shining Legends (2017)</option>
+<option>Crimson Invasion (2017)</option>
+<option>Ultra Prism (2018)</option>
+<option>Forbidden Light (2018)</option>
+<option>Celestial Storm (2018)</option>
+<option>Dragon Majesty (2018)</option>
+<option>Lost Thunder (2018)</option>
+<option>Team Up (2019)</option>
+<option>Detective Pikachu (2019)</option>
+<option>Unbroken Bonds (2019)</option>
+<option>Unified Minds (2019)</option>
+<option>Hidden Fates (2019)</option>
+<option>Cosmic Eclipse (2019)</option>
+<option>Sword &amp; Shield (2020)</option>
+<option>Rebel Clash (2020)</option>
+<option>Darkness Ablaze (2020)</option>
+<option>Champion&#x27;s Path (2020)</option>
+<option>Vivid Voltage (2020)</option>
+<option>Shining Fates (2021)</option>
+<option>Battle Styles (2021)</option>
+<option>Chilling Reign (2021)</option>
+<option>Evolving Skies (2021)</option>
+<option>Celebrations (2021)</option>
+<option>Fusion Strike (2021)</option>
+<option>Brilliant Stars (2022)</option>
+<option>Astral Radiance (2022)</option>
+<option>Pokémon GO (2022)</option>
+<option>Lost Origin (2022)</option>
+<option>Silver Tempest (2022)</option>
+<option>Crown Zenith (2023)</option>
+<option>Scarlet &amp; Violet (2023)</option>
+<option>Paldea Evolved (2023)</option>
+<option>Obsidian Flames (2023)</option>
+<option>151 (2023)</option>
+<option>Paradox Rift (2023)</option>
+<option>Paldean Fates (2024)</option>
+<option>Temporal Forces (2024)</option>
+<option>Twilight Masquerade (2024)</option>
+<option>Shrouded Fable (2024)</option>
+<option>Stellar Crown (2024)</option>
+<option>Surging Sparks (2024)</option>
+<option>Prismatic Evolutions (2025)</option>
+<option>Journey Together (2025)</option>
+<option>Destined Rivals (2025)</option>
+<option>Black Bolt (2025)</option>
+<option>White Flare (2025)</option>
+<option>Mega Evolution (2025)</option>
+<option>Phantasmal Flames (2025)</option>
+<option>Ascended Heroes (2026)</option>
+<option>Perfect Order (2026)</option>
+<option>Chaos Rising (2026)</option>
+<option>Pitch Black (2026)</option>
+</select></div>
         <div><label>Cantidad</label><input type="number" id="ca-cantidad" value="1"></div>
         <div><label>Grading / Estado</label><input id="ca-grading" placeholder="PSA 10 / Booster Box..."></div>
         <div><label>Precio de compra (USD)</label><input type="number" id="ca-precio" step="0.01"></div>
@@ -290,7 +553,7 @@ async function addCompra() {
   };
   DATA.Compras.push(data);
   renderCompras(); renderResumen(); renderTarjetas();
-  ["c-nombre","c-expansion","c-numero","c-calificacion","c-precio","c-canal"].forEach(i => document.getElementById(i).value = "");
+  ["c-nombre","c-numero","c-calificacion","c-precio","c-canal"].forEach(i => document.getElementById(i).value = "");
   document.getElementById("c-graded").value = "No"; toggleGraded();
 
   setBusy("btn-compra", true, "Guardar compra");
@@ -322,7 +585,7 @@ function renderCompras() {
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
       <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button>` : ""}</td>
-      <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.NombrePokemon||""}</td>
+      <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
       <td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td><td>${c.CanalCompra||""}</td>
       <td><span class="badge ${estado==='Vendido'?'vendido':'disponible'}">${estado}</span></td>
@@ -351,7 +614,7 @@ async function addCartera() {
   };
   DATA.Cartera.push(data);
   renderCartera(); renderTarjetas();
-  ["ca-nombre","ca-expansion","ca-grading","ca-precio","ca-precioactual"].forEach(i => document.getElementById(i).value = "");
+  ["ca-nombre","ca-grading","ca-precio","ca-precioactual"].forEach(i => document.getElementById(i).value = "");
 
   setBusy("btn-cartera", true, "Guardar ítem");
   await postSheet("Cartera", "add", data);

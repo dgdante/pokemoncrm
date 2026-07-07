@@ -11,7 +11,7 @@
   * { box-sizing: border-box; }
   body { font-family: Arial, sans-serif; background: var(--gray-bg); margin: 0; color: #1A2E4A; }
   .banner { width: 100%; height: 320px; overflow: hidden; background: var(--navy); text-align: center; }
-  .banner img { width: 100%; height: 100%; object-fit: cover; object-position: center 45%; display: block; }
+  .banner img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
   header { background: var(--navy); color: white; padding: 18px 24px; border-bottom: 4px solid var(--gold); }
   header h1 { margin: 0; font-size: 1.4rem; }
   header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.85; }
@@ -648,12 +648,45 @@ function checkConfig() {
 }
 
 async function fetchSheet(sheet) {
-  const res = await fetch(`${API_URL}?sheet=${sheet}`);
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}?sheet=${sheet}`);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Respuesta no-JSON al leer", sheet, text);
+      return { error: "respuesta_invalida" };
+    }
+  } catch (err) {
+    console.error("Error de red al leer", sheet, err);
+    return { error: "red" };
+  }
 }
 async function postSheet(sheet, action, data, id) {
-  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ sheet, action, data, id }) });
-  return res.json();
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ sheet, action, data, id }) });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Respuesta no-JSON al guardar en", sheet, text);
+      return { error: "respuesta_invalida" };
+    }
+  } catch (err) {
+    console.error("Error de red al guardar en", sheet, err);
+    return { error: "red" };
+  }
+}
+
+/** Refresca una hoja en DATA solo si la respuesta es válida; si falla, mantiene lo que ya había en pantalla. */
+async function safeRefresh(sheetKey, sheetName) {
+  const fresh = await fetchSheet(sheetName);
+  if (!fresh || fresh.error) {
+    console.warn("No se pudo refrescar", sheetName, "- se mantiene lo que había en pantalla");
+    return false;
+  }
+  DATA[sheetKey] = fresh;
+  return true;
 }
 
 async function loadAll() {
@@ -697,6 +730,18 @@ async function addCompra() {
     CanalCompra: document.getElementById("c-canal").value
   };
 
+  const faltantes = [];
+  if (!data.EstadoEnvio) faltantes.push("Estado envío");
+  if (!data.TipoCarta) faltantes.push("Tipo de carta");
+  if (!data.Idioma) faltantes.push("Idioma");
+  if (!data.Expansion) faltantes.push("Expansión");
+  if (!data.Graded) faltantes.push("Graded");
+  if (!data.Tarjeta) faltantes.push("Pago con");
+  if (faltantes.length > 0) {
+    const seguir = confirm("Quedaron sin completar: " + faltantes.join(", ") + ".\n¿Guardar igual?");
+    if (!seguir) return;
+  }
+
   if (isEdit) {
     const idx = DATA.Compras.findIndex(c => c.ID === id);
     if (idx !== -1) DATA.Compras[idx] = data;
@@ -707,10 +752,19 @@ async function addCompra() {
   closeCompraModal();
 
   setBusy("btn-compra", true, "Guardar compra");
-  await postSheet("Compras", isEdit ? "update" : "add", data, isEdit ? id : undefined);
-  DATA.Compras = await fetchSheet("Compras");
-  renderCompras(); renderResumen(); renderTarjetas();
-  setBusy("btn-compra", false, "Guardar compra");
+  try {
+    const result = await postSheet("Compras", isEdit ? "update" : "add", data, isEdit ? id : undefined);
+    if (result && result.error) {
+      alert("No se pudo confirmar el guardado con Google Sheets (" + result.error + "). La carta quedó visible en pantalla; revisá la planilla para confirmar que se guardó, y si no, volvé a cargarla.");
+    }
+    await safeRefresh("Compras", "Compras");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. La carta quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderCompras(); renderResumen(); renderTarjetas();
+    setBusy("btn-compra", false, "Guardar compra");
+  }
 }
 
 async function deleteCompra(id) {
@@ -718,7 +772,7 @@ async function deleteCompra(id) {
   DATA.Compras = DATA.Compras.filter(c => c.ID !== id);
   renderCompras(); renderResumen(); renderTarjetas();
   await postSheet("Compras", "delete", null, id);
-  DATA.Compras = await fetchSheet("Compras");
+  await safeRefresh("Compras", "Compras");
   renderCompras(); renderResumen(); renderTarjetas();
 }
 
@@ -771,10 +825,16 @@ async function addCartera() {
   ["ca-nombre","ca-grading","ca-precio","ca-precioactual"].forEach(i => document.getElementById(i).value = "");
 
   setBusy("btn-cartera", true, "Guardar ítem");
-  await postSheet("Cartera", "add", data);
-  DATA.Cartera = await fetchSheet("Cartera");
-  renderCartera(); renderTarjetas();
-  setBusy("btn-cartera", false, "Guardar ítem");
+  try {
+    await postSheet("Cartera", "add", data);
+    await safeRefresh("Cartera", "Cartera");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. El ítem quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderCartera(); renderTarjetas();
+    setBusy("btn-cartera", false, "Guardar ítem");
+  }
 }
 
 async function deleteCartera(id) {
@@ -782,7 +842,7 @@ async function deleteCartera(id) {
   DATA.Cartera = DATA.Cartera.filter(c => c.ID !== id);
   renderCartera(); renderTarjetas();
   await postSheet("Cartera", "delete", null, id);
-  DATA.Cartera = await fetchSheet("Cartera");
+  await safeRefresh("Cartera", "Cartera");
   renderCartera(); renderTarjetas();
 }
 
@@ -845,10 +905,16 @@ async function addVenta() {
   document.getElementById("s-preview").textContent = "";
 
   setBusy("btn-venta", true, "Guardar venta");
-  await postSheet("Subastas", "add", data);
-  DATA.Subastas = await fetchSheet("Subastas");
-  renderAll();
-  setBusy("btn-venta", false, "Guardar venta");
+  try {
+    await postSheet("Subastas", "add", data);
+    await safeRefresh("Subastas", "Subastas");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. La venta quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderAll();
+    setBusy("btn-venta", false, "Guardar venta");
+  }
 }
 
 async function deleteVenta(id) {
@@ -856,7 +922,7 @@ async function deleteVenta(id) {
   DATA.Subastas = DATA.Subastas.filter(s => s.ID !== id);
   renderAll();
   await postSheet("Subastas", "delete", null, id);
-  DATA.Subastas = await fetchSheet("Subastas");
+  await safeRefresh("Subastas", "Subastas");
   renderAll();
 }
 
@@ -897,10 +963,16 @@ async function addEvento() {
   ["ev-fecha","ev-nombre","ev-notas"].forEach(i => document.getElementById(i).value = "");
 
   setBusy("btn-evento", true, "Guardar subasta");
-  await postSheet("SubastasEventos", "add", data);
-  DATA.SubastasEventos = await fetchSheet("SubastasEventos");
-  renderEventos(); renderVentas();
-  setBusy("btn-evento", false, "Guardar subasta");
+  try {
+    await postSheet("SubastasEventos", "add", data);
+    await safeRefresh("SubastasEventos", "SubastasEventos");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. La subasta quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderEventos(); renderVentas();
+    setBusy("btn-evento", false, "Guardar subasta");
+  }
 }
 
 async function deleteEvento(id) {
@@ -908,7 +980,7 @@ async function deleteEvento(id) {
   DATA.SubastasEventos = DATA.SubastasEventos.filter(e => e.ID !== id);
   renderEventos(); renderVentas();
   await postSheet("SubastasEventos", "delete", null, id);
-  DATA.SubastasEventos = await fetchSheet("SubastasEventos");
+  await safeRefresh("SubastasEventos", "SubastasEventos");
   renderEventos(); renderVentas();
 }
 
@@ -950,10 +1022,16 @@ async function addPago() {
   ["p-monto","p-notas"].forEach(i => document.getElementById(i).value = "");
 
   setBusy("btn-pago", true, "Guardar pago");
-  await postSheet("Pagos", "add", data);
-  DATA.Pagos = await fetchSheet("Pagos");
-  renderTarjetas();
-  setBusy("btn-pago", false, "Guardar pago");
+  try {
+    await postSheet("Pagos", "add", data);
+    await safeRefresh("Pagos", "Pagos");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. El pago quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderTarjetas();
+    setBusy("btn-pago", false, "Guardar pago");
+  }
 }
 
 async function deletePago(id) {
@@ -961,7 +1039,7 @@ async function deletePago(id) {
   DATA.Pagos = DATA.Pagos.filter(p => p.ID !== id);
   renderTarjetas();
   await postSheet("Pagos", "delete", null, id);
-  DATA.Pagos = await fetchSheet("Pagos");
+  await safeRefresh("Pagos", "Pagos");
   renderTarjetas();
 }
 

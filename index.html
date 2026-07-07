@@ -40,6 +40,10 @@
   td { padding: 8px; border-bottom: 1px solid var(--border); }
   tr:nth-child(even) { background: #FAFBFC; }
   .table-wrap { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+  .table-wrap.tall { max-height: 720px; }
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .list-head h3 { margin: 0; }
+  .search-inline { max-width: 280px; padding: 7px 10px; font-size: 0.85rem; }
   .badge { padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
   .badge.disponible { background: var(--blue-pale); color: var(--navy); }
   .badge.vendido { background: #EAF7EF; color: var(--green); }
@@ -86,7 +90,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON</h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v15 · 2026-07-08</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -294,12 +298,11 @@
       </div>
     </div>
     <div class="card">
-      <h3>Buscar carta</h3>
-      <input id="c-buscar" placeholder="Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
-    </div>
-    <div class="card">
-      <h3>Listado de compras</h3>
-      <div class="table-wrap"><table id="tabla-compras"><thead><tr>
+      <div class="list-head">
+        <h3>Listado de compras</h3>
+        <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
+      </div>
+      <div class="table-wrap tall"><table id="tabla-compras"><thead><tr>
         <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
         <th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Canal</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
       </tr></thead><tbody></tbody></table></div>
@@ -701,6 +704,7 @@ async function loadAll() {
   } else {
     // Respaldo por si el Apps Script todavía no tiene el modo "ALL" (versión vieja sin actualizar)
     console.warn("Carga combinada falló, probando hoja por hoja...");
+    showAppWarning("Tu Apps Script parece estar en una versión vieja (no reconoce la carga combinada). Actualizalo: pegá el Code.gs más reciente en Apps Script y hacé Nueva versión → Implementar.");
     const [compras, cartera, subastas, pagos, eventos] = await Promise.all([
       fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos"), fetchSheet("SubastasEventos")
     ]);
@@ -710,7 +714,20 @@ async function loadAll() {
     DATA.Pagos = pagos.error ? [] : pagos;
     DATA.SubastasEventos = eventos.error ? [] : eventos;
   }
+
+  const sinId = DATA.Compras.filter(c => !c.ID).length + DATA.Cartera.filter(c => !c.ID).length;
+  if (sinId > 0) {
+    showAppWarning(`Hay ${sinId} fila(s) sin ID (por eso no tienen botón de editar/borrar). En Apps Script, elegí la función "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶) para arreglarlo.`);
+  }
+
   renderAll();
+}
+
+function showAppWarning(msg) {
+  const div = document.getElementById("config-warning");
+  div.textContent = "⚠️ " + msg;
+  div.style.display = "block";
+}
 }
 function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderEventos(); }
 function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }

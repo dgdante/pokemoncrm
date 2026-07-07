@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>CRM Pokémon</title>
+<style>
+  :root {
+    --navy: #1A2E4A; --navy-light: #2E5E8E; --blue-pale: #D6E4F0; --gold: #F0A500;
+    --gray-bg: #F5F7FA; --border: #E2E8F0; --green: #27AE60; --red: #E74C3C;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: var(--gray-bg); margin: 0; color: #1A2E4A; }
+  header { background: var(--navy); color: white; padding: 18px 24px; border-bottom: 4px solid var(--gold); }
+  header h1 { margin: 0; font-size: 1.4rem; }
+  header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.85; }
+  nav { display: flex; background: white; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  nav button {
+    flex: 1; min-width: 110px; padding: 14px; border: none; background: none;
+    font-size: 0.95rem; font-weight: bold; color: var(--navy-light); cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  nav button.active { color: var(--navy); border-bottom: 3px solid var(--gold); }
+  main { padding: 20px; max-width: 1300px; margin: 0 auto; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  label { font-size: 0.75rem; font-weight: bold; color: var(--navy-light); display: block; margin-bottom: 3px; }
+  input, select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; }
+  button.primary {
+    background: var(--navy); color: white; border: none; padding: 10px 18px;
+    border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 12px;
+  }
+  button.primary:hover { background: var(--navy-light); }
+  button.primary:disabled { background: #A8B6C6; cursor: wait; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: var(--navy); color: white; padding: 8px; text-align: left; position: sticky; top: 0; }
+  td { padding: 8px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) { background: #FAFBFC; }
+  .table-wrap { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+  .badge { padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
+  .badge.disponible { background: var(--blue-pale); color: var(--navy); }
+  .badge.vendido { background: #EAF7EF; color: var(--green); }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .summary-box { background: var(--blue-pale); border-radius: 8px; padding: 14px; }
+  .summary-box .label { font-size: 0.75rem; color: var(--navy-light); font-weight: bold; }
+  .summary-box .value { font-size: 1.3rem; font-weight: bold; color: var(--navy); }
+  .summary-box.saldo-neg .value { color: var(--red); }
+  .config-warning { background: #FEF5E7; border: 1px solid var(--gold); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
+  .del-btn { background: none; border: none; color: var(--red); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+  .del-btn:hover { color: #a8321f; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CRM POKÉMON</h1>
+  <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="compras">Compras</button>
+  <button class="tab-btn" data-tab="ventas">Ventas</button>
+  <button class="tab-btn" data-tab="tarjetas">Tarjetas</button>
+  <button class="tab-btn" data-tab="cartera">Cartera</button>
+  <button class="tab-btn" data-tab="resumen">Resumen</button>
+</nav>
+
+<main>
+  <div id="config-warning" class="config-warning" style="display:none">
+    ⚠️ Falta configurar la URL de tu Apps Script. Editá la constante <code>API_URL</code> cerca del final del archivo.
+  </div>
+
+  <!-- COMPRAS -->
+  <section id="tab-compras" class="tab active">
+    <div class="card">
+      <h3>Nueva compra</h3>
+      <div class="form-grid">
+        <div><label>Fecha de compra</label><input type="date" id="c-fecha"></div>
+        <div><label>Estado envío</label>
+          <select id="c-envio"><option>Pedido</option><option>En tránsito</option><option>Recibido</option></select>
+        </div>
+        <div><label>Nombre Pokémon</label><input id="c-nombre" placeholder="Charizard"></div>
+        <div><label>Tipo de carta</label>
+          <select id="c-tipo"><option>Unlimited</option><option>Holo</option><option>Reverse</option><option>FA</option><option>IR</option><option>SIR</option></select>
+        </div>
+        <div><label>Idioma</label>
+          <select id="c-idioma"><option value="ENG">ENG</option><option value="ESP">ESP</option><option value="JAP">JAP</option><option value="CH">CH</option></select>
+        </div>
+        <div><label>Expansión</label><input id="c-expansion"></div>
+        <div><label>N° de carta</label><input id="c-numero"></div>
+        <div><label>Graded</label>
+          <select id="c-graded" onchange="toggleGraded()"><option value="No">No</option><option value="Si">Si</option></select>
+        </div>
+        <div id="c-grading-fields" class="hidden"><label>Calificación</label><input id="c-calificacion" placeholder="10, 9.5..."></div>
+        <div id="c-empresa-fields" class="hidden">
+          <label>Empresa gradeadora</label>
+          <select id="c-empresa"><option>PSA</option><option>Becket</option><option>CGC</option><option>TAG</option></select>
+        </div>
+        <div><label>Precio de compra (USD)</label><input type="number" id="c-precio" step="0.01"></div>
+        <div><label>Pago con</label>
+          <select id="c-pagocon"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select>
+        </div>
+        <div><label>Canal de compra</label><input id="c-canal" placeholder="EBAY"></div>
+      </div>
+      <button class="primary" id="btn-compra" onclick="addCompra()">Guardar compra</button>
+    </div>
+    <div class="card">
+      <h3>Listado de compras</h3>
+      <div class="table-wrap"><table id="tabla-compras"><thead><tr>
+        <th></th><th>Código</th><th>Fecha</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
+        <th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Canal</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- VENTAS (hoja backend: Subastas) -->
+  <section id="tab-ventas" class="tab">
+    <div class="card">
+      <h3>Nueva venta</h3>
+      <div class="form-grid">
+        <div><label>Fecha de venta</label><input type="date" id="s-fecha"></div>
+        <div><label>Código (de Compras)</label><input id="s-codigo" placeholder="C-001"></div>
+        <div><label>Canal</label><select id="s-canal"><option>Subasta WhatsApp</option><option>Instagram Directa</option></select></div>
+        <div><label>Comprador</label><input id="s-comprador"></div>
+        <div><label>Precio final (USD)</label><input type="number" id="s-precio" step="0.01"></div>
+        <div><label>Notas</label><input id="s-notas"></div>
+      </div>
+      <button class="primary" id="btn-venta" onclick="addVenta()">Guardar venta</button>
+    </div>
+    <div class="card">
+      <h3>Listado de ventas</h3>
+      <div class="table-wrap"><table id="tabla-ventas"><thead><tr>
+        <th></th><th>Fecha</th><th>Código</th><th>Canal</th><th>Comprador</th><th>Precio (USD)</th><th>Notas</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- TARJETAS -->
+  <section id="tab-tarjetas" class="tab">
+    <div class="card">
+      <h3>Saldo por medio de pago</h3>
+      <div id="tarjetas-summary" class="summary-grid"></div>
+    </div>
+    <div class="card">
+      <h3>Registrar pago</h3>
+      <div class="form-grid">
+        <div><label>Fecha de pago</label><input type="date" id="p-fecha"></div>
+        <div><label>Pago con</label><select id="p-tarjeta"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select></div>
+        <div><label>Monto pagado (USD)</label><input type="number" id="p-monto" step="0.01"></div>
+        <div><label>Notas</label><input id="p-notas"></div>
+      </div>
+      <button class="primary" id="btn-pago" onclick="addPago()">Guardar pago</button>
+    </div>
+    <div class="card">
+      <h3>Historial de pagos</h3>
+      <div class="table-wrap"><table id="tabla-pagos"><thead><tr>
+        <th></th><th>Fecha</th><th>Pago con</th><th>Monto (USD)</th><th>Notas</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- CARTERA -->
+  <section id="tab-cartera" class="tab">
+    <div class="card">
+      <h3>Resumen de cartera</h3>
+      <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
+        Esto es solo inventario/inversión — no se descuenta ni se suma a la rentabilidad del negocio.
+      </p>
+      <div id="cartera-summary" class="summary-grid"></div>
+    </div>
+    <div class="card">
+      <h3>Nuevo ítem de cartera</h3>
+      <div class="form-grid">
+        <div><label>Categoría</label>
+          <select id="ca-cat"><option>Producto Sellado</option><option>Carta Gradeada</option><option>Carta Valiosa (No Gradeada)</option></select>
+        </div>
+        <div><label>Fecha de compra</label><input type="date" id="ca-fecha"></div>
+        <div><label>Nombre / Producto</label><input id="ca-nombre"></div>
+        <div><label>Expansión</label><input id="ca-expansion"></div>
+        <div><label>Cantidad</label><input type="number" id="ca-cantidad" value="1"></div>
+        <div><label>Grading / Estado</label><input id="ca-grading" placeholder="PSA 10 / Booster Box..."></div>
+        <div><label>Precio de compra (USD)</label><input type="number" id="ca-precio" step="0.01"></div>
+        <div><label>Precio actual (USD)</label><input type="number" id="ca-precioactual" step="0.01"></div>
+        <div><label>Pago con</label><select id="ca-pagocon"><option>Marian UK</option><option>Costi MasterCard</option><option>EFT</option></select></div>
+      </div>
+      <button class="primary" id="btn-cartera" onclick="addCartera()">Guardar ítem</button>
+    </div>
+    <div class="card">
+      <h3>Listado de cartera</h3>
+      <div class="table-wrap"><table id="tabla-cartera"><thead><tr>
+        <th></th><th>Código</th><th>Categoría</th><th>Fecha</th><th>Producto</th><th>Cant.</th>
+        <th>Grading</th><th>Compra (USD)</th><th>Actual (USD)</th><th>Pago con</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- RESUMEN -->
+  <section id="tab-resumen" class="tab">
+    <div class="card">
+      <h3>Resumen general del negocio</h3>
+      <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
+        La rentabilidad solo considera Compras/Ventas. Cartera es inversión, no se suma acá.
+      </p>
+      <div id="resumen-summary" class="summary-grid"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ======= CONFIGURACIÓN ======= */
+const API_URL = "https://script.google.com/macros/s/AKfycbx6rnsDN2YXlTPLcdCl4Dmjn2sLlhPuZ-Zygbe_eqbXsGY4izYFLBiE9d3AS0lcbNeN/exec";
+/* ============================== */
+
+let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [] };
+const CARDS = ["Marian UK", "Costi MasterCard", "EFT"];
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+function newId() { return Date.now() + "-" + Math.random().toString(36).slice(2, 7); }
+
+function toggleGraded() {
+  const isGraded = document.getElementById("c-graded").value === "Si";
+  document.getElementById("c-grading-fields").classList.toggle("hidden", !isGraded);
+  document.getElementById("c-empresa-fields").classList.toggle("hidden", !isGraded);
+}
+
+function checkConfig() {
+  if (!API_URL || API_URL.indexOf("PEGA_AQUI") !== -1) {
+    document.getElementById("config-warning").style.display = "block";
+    return false;
+  }
+  return true;
+}
+
+async function fetchSheet(sheet) {
+  const res = await fetch(`${API_URL}?sheet=${sheet}`);
+  return res.json();
+}
+async function postSheet(sheet, action, data, id) {
+  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ sheet, action, data, id }) });
+  return res.json();
+}
+
+async function loadAll() {
+  if (!checkConfig()) return;
+  const [compras, cartera, subastas, pagos] = await Promise.all([
+    fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos")
+  ]);
+  DATA.Compras = compras.error ? [] : compras;
+  DATA.Cartera = cartera.error ? [] : cartera;
+  DATA.Subastas = subastas.error ? [] : subastas;
+  DATA.Pagos = pagos.error ? [] : pagos;
+  renderAll();
+}
+function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); }
+function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }
+function findVenta(codigo) { return DATA.Subastas.find(s => s.Codigo === codigo); }
+function setBusy(btnId, busy, label) {
+  const b = document.getElementById(btnId); b.disabled = busy; b.textContent = busy ? "Guardando..." : label;
+}
+
+/* ---------- COMPRAS ---------- */
+async function addCompra() {
+  const id = newId();
+  const codigo = nextCode("C", DATA.Compras);
+  const data = {
+    ID: id, Codigo: codigo,
+    FechaCompra: document.getElementById("c-fecha").value,
+    EstadoEnvio: document.getElementById("c-envio").value,
+    NombrePokemon: document.getElementById("c-nombre").value,
+    TipoCarta: document.getElementById("c-tipo").value,
+    Idioma: document.getElementById("c-idioma").value,
+    Expansion: document.getElementById("c-expansion").value,
+    NumeroCarta: document.getElementById("c-numero").value,
+    Graded: document.getElementById("c-graded").value,
+    Calificacion: document.getElementById("c-graded").value === "Si" ? document.getElementById("c-calificacion").value : "",
+    EmpresaGradeadora: document.getElementById("c-graded").value === "Si" ? document.getElementById("c-empresa").value : "",
+    PrecioCompra: parseFloat(document.getElementById("c-precio").value) || 0,
+    Tarjeta: document.getElementById("c-pagocon").value,
+    CanalCompra: document.getElementById("c-canal").value
+  };
+  DATA.Compras.push(data);
+  renderCompras(); renderResumen(); renderTarjetas();
+  ["c-nombre","c-expansion","c-numero","c-calificacion","c-precio","c-canal"].forEach(i => document.getElementById(i).value = "");
+  document.getElementById("c-graded").value = "No"; toggleGraded();
+
+  setBusy("btn-compra", true, "Guardar compra");
+  await postSheet("Compras", "add", data);
+  DATA.Compras = await fetchSheet("Compras");
+  renderCompras(); renderResumen(); renderTarjetas();
+  setBusy("btn-compra", false, "Guardar compra");
+}
+
+async function deleteCompra(id) {
+  if (!confirm("¿Borrar esta compra?")) return;
+  DATA.Compras = DATA.Compras.filter(c => c.ID !== id);
+  renderCompras(); renderResumen(); renderTarjetas();
+  await postSheet("Compras", "delete", null, id);
+  DATA.Compras = await fetchSheet("Compras");
+  renderCompras(); renderResumen(); renderTarjetas();
+}
+
+function renderCompras() {
+  const tbody = document.querySelector("#tabla-compras tbody");
+  tbody.innerHTML = "";
+  DATA.Compras.forEach(c => {
+    const venta = findVenta(c.Codigo);
+    const estado = venta ? "Vendido" : "Disponible";
+    const compra = parseFloat(c.PrecioCompra) || 0;
+    const precioVenta = venta ? parseFloat(venta.PrecioVenta) : null;
+    const rentabUsd = venta ? (precioVenta - compra) : null;
+    const rentabPct = venta && compra ? ((precioVenta - compra) / compra * 100) : null;
+    const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
+    tbody.innerHTML += `<tr>
+      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button>` : ""}</td>
+      <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.NombrePokemon||""}</td>
+      <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
+      <td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td><td>${c.CanalCompra||""}</td>
+      <td><span class="badge ${estado==='Vendido'?'vendido':'disponible'}">${estado}</span></td>
+      <td>${precioVenta!==null ? "$"+precioVenta.toFixed(2) : ""}</td>
+      <td>${rentabPct!==null ? rentabPct.toFixed(1)+"%" : ""}</td>
+      <td>${rentabUsd!==null ? "$"+rentabUsd.toFixed(2) : ""}</td>
+    </tr>`;
+  });
+}
+
+/* ---------- CARTERA (sin vínculo a rentabilidad) ---------- */
+async function addCartera() {
+  const id = newId();
+  const codigo = nextCode("CAR", DATA.Cartera);
+  const data = {
+    ID: id, Codigo: codigo,
+    Categoria: document.getElementById("ca-cat").value,
+    FechaCompra: document.getElementById("ca-fecha").value,
+    NombreProducto: document.getElementById("ca-nombre").value,
+    Expansion: document.getElementById("ca-expansion").value,
+    Cantidad: parseInt(document.getElementById("ca-cantidad").value) || 1,
+    GradingEstado: document.getElementById("ca-grading").value,
+    PrecioCompra: parseFloat(document.getElementById("ca-precio").value) || 0,
+    PrecioActual: parseFloat(document.getElementById("ca-precioactual").value) || 0,
+    Tarjeta: document.getElementById("ca-pagocon").value
+  };
+  DATA.Cartera.push(data);
+  renderCartera(); renderTarjetas();
+  ["ca-nombre","ca-expansion","ca-grading","ca-precio","ca-precioactual"].forEach(i => document.getElementById(i).value = "");
+
+  setBusy("btn-cartera", true, "Guardar ítem");
+  await postSheet("Cartera", "add", data);
+  DATA.Cartera = await fetchSheet("Cartera");
+  renderCartera(); renderTarjetas();
+  setBusy("btn-cartera", false, "Guardar ítem");
+}
+
+async function deleteCartera(id) {
+  if (!confirm("¿Borrar este ítem?")) return;
+  DATA.Cartera = DATA.Cartera.filter(c => c.ID !== id);
+  renderCartera(); renderTarjetas();
+  await postSheet("Cartera", "delete", null, id);
+  DATA.Cartera = await fetchSheet("Cartera");
+  renderCartera(); renderTarjetas();
+}
+
+function renderCartera() {
+  const tbody = document.querySelector("#tabla-cartera tbody");
+  tbody.innerHTML = "";
+  let totales = {};
+  DATA.Cartera.forEach(c => {
+    const compra = parseFloat(c.PrecioCompra) || 0;
+    const actual = c.PrecioActual !== undefined && c.PrecioActual !== "" ? parseFloat(c.PrecioActual) : null;
+    tbody.innerHTML += `<tr>
+      <td>${c.ID ? `<button class="del-btn" onclick="deleteCartera('${c.ID}')">✕</button>` : ""}</td>
+      <td>${c.Codigo}</td><td>${c.Categoria||""}</td><td>${c.FechaCompra||""}</td>
+      <td>${c.NombreProducto||""}</td><td>${c.Cantidad||""}</td><td>${c.GradingEstado||""}</td>
+      <td>$${compra.toFixed(2)}</td><td>${actual!==null ? "$"+actual.toFixed(2) : ""}</td><td>${c.Tarjeta||""}</td>
+    </tr>`;
+    const cat = c.Categoria || "Sin categoría";
+    totales[cat] = (totales[cat]||0) + compra;
+  });
+  const totalGeneral = Object.values(totales).reduce((a,b)=>a+b, 0);
+  const div = document.getElementById("cartera-summary");
+  let html = `<div class="summary-box"><div class="label">Invertido TOTAL</div><div class="value">$${totalGeneral.toFixed(2)}</div></div>`;
+  Object.keys(totales).forEach(cat => {
+    html += `<div class="summary-box"><div class="label">${cat}</div><div class="value">$${totales[cat].toFixed(2)}</div></div>`;
+  });
+  div.innerHTML = html;
+}
+
+/* ---------- VENTAS (hoja backend: Subastas) ---------- */
+async function addVenta() {
+  const id = newId();
+  const data = {
+    ID: id,
+    FechaVenta: document.getElementById("s-fecha").value,
+    Codigo: document.getElementById("s-codigo").value,
+    CanalVenta: document.getElementById("s-canal").value,
+    Comprador: document.getElementById("s-comprador").value,
+    PrecioVenta: parseFloat(document.getElementById("s-precio").value) || 0,
+    Notas: document.getElementById("s-notas").value
+  };
+  DATA.Subastas.push(data);
+  renderAll();
+  ["s-codigo","s-comprador","s-precio","s-notas"].forEach(i => document.getElementById(i).value = "");
+
+  setBusy("btn-venta", true, "Guardar venta");
+  await postSheet("Subastas", "add", data);
+  DATA.Subastas = await fetchSheet("Subastas");
+  renderAll();
+  setBusy("btn-venta", false, "Guardar venta");
+}
+
+async function deleteVenta(id) {
+  if (!confirm("¿Borrar esta venta?")) return;
+  DATA.Subastas = DATA.Subastas.filter(s => s.ID !== id);
+  renderAll();
+  await postSheet("Subastas", "delete", null, id);
+  DATA.Subastas = await fetchSheet("Subastas");
+  renderAll();
+}
+
+function renderVentas() {
+  const tbody = document.querySelector("#tabla-ventas tbody");
+  tbody.innerHTML = "";
+  DATA.Subastas.forEach(s => {
+    tbody.innerHTML += `<tr>
+      <td>${s.ID ? `<button class="del-btn" onclick="deleteVenta('${s.ID}')">✕</button>` : ""}</td>
+      <td>${s.FechaVenta||""}</td><td>${s.Codigo||""}</td><td>${s.CanalVenta||""}</td>
+      <td>${s.Comprador||""}</td><td>$${Number(s.PrecioVenta||0).toFixed(2)}</td><td>${s.Notas||""}</td>
+    </tr>`;
+  });
+}
+
+/* ---------- TARJETAS / PAGOS ---------- */
+async function addPago() {
+  const id = newId();
+  const data = {
+    ID: id,
+    Fecha: document.getElementById("p-fecha").value,
+    Tarjeta: document.getElementById("p-tarjeta").value,
+    Monto: parseFloat(document.getElementById("p-monto").value) || 0,
+    Notas: document.getElementById("p-notas").value
+  };
+  DATA.Pagos.push(data);
+  renderTarjetas();
+  ["p-monto","p-notas"].forEach(i => document.getElementById(i).value = "");
+
+  setBusy("btn-pago", true, "Guardar pago");
+  await postSheet("Pagos", "add", data);
+  DATA.Pagos = await fetchSheet("Pagos");
+  renderTarjetas();
+  setBusy("btn-pago", false, "Guardar pago");
+}
+
+async function deletePago(id) {
+  if (!confirm("¿Borrar este pago?")) return;
+  DATA.Pagos = DATA.Pagos.filter(p => p.ID !== id);
+  renderTarjetas();
+  await postSheet("Pagos", "delete", null, id);
+  DATA.Pagos = await fetchSheet("Pagos");
+  renderTarjetas();
+}
+
+function renderTarjetas() {
+  const tbody = document.querySelector("#tabla-pagos tbody");
+  tbody.innerHTML = "";
+  DATA.Pagos.forEach(p => {
+    tbody.innerHTML += `<tr>
+      <td>${p.ID ? `<button class="del-btn" onclick="deletePago('${p.ID}')">✕</button>` : ""}</td>
+      <td>${p.Fecha||""}</td><td>${p.Tarjeta||""}</td><td>$${Number(p.Monto||0).toFixed(2)}</td><td>${p.Notas||""}</td>
+    </tr>`;
+  });
+  const div = document.getElementById("tarjetas-summary");
+  let html = "";
+  CARDS.forEach(card => {
+    const gastadoCompras = DATA.Compras.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+    const gastadoCartera = DATA.Cartera.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+    const gastado = gastadoCompras + gastadoCartera;
+    const pagado = DATA.Pagos.filter(p => p.Tarjeta === card).reduce((a,p)=>a+(parseFloat(p.Monto)||0),0);
+    const saldo = gastado - pagado;
+    html += `
+      <div class="summary-box"><div class="label">${card} — Gastado</div><div class="value">$${gastado.toFixed(2)}</div></div>
+      <div class="summary-box"><div class="label">${card} — Pagado</div><div class="value">$${pagado.toFixed(2)}</div></div>
+      <div class="summary-box ${saldo>0?'saldo-neg':''}"><div class="label">${card} — Saldo</div><div class="value">$${saldo.toFixed(2)}</div></div>
+    `;
+  });
+  div.innerHTML = html;
+}
+
+/* ---------- RESUMEN (solo Compras/Ventas; Cartera no suma acá) ---------- */
+function renderResumen() {
+  const investCompras = DATA.Compras.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+  const investCartera = DATA.Cartera.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+  let rentCompras = 0, vendidasCompras = 0;
+  DATA.Compras.forEach(c => { const v = findVenta(c.Codigo); if (v) { vendidasCompras++; rentCompras += parseFloat(v.PrecioVenta)-parseFloat(c.PrecioCompra); } });
+  const div = document.getElementById("resumen-summary");
+  div.innerHTML = `
+    <div class="summary-box"><div class="label">Invertido en Compras</div><div class="value">$${investCompras.toFixed(2)}</div></div>
+    <div class="summary-box"><div class="label">Invertido en Cartera (no cuenta en rentabilidad)</div><div class="value">$${investCartera.toFixed(2)}</div></div>
+    <div class="summary-box"><div class="label">Cartas vendidas</div><div class="value">${vendidasCompras} / ${DATA.Compras.length}</div></div>
+    <div class="summary-box"><div class="label">Rentabilidad TOTAL (Compras/Ventas)</div><div class="value">$${rentCompras.toFixed(2)}</div></div>
+  `;
+}
+
+loadAll();
+</script>
+</body>
+</html>

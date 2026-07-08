@@ -66,6 +66,12 @@
   .edit-btn:hover { color: var(--navy); }
   .dup-btn { background: none; border: none; color: var(--gold); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
   .dup-btn:hover { color: #b87c00; }
+  .stock-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.75rem; margin-bottom: 16px; color: var(--navy); }
+  .stock-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .stock-row { margin-bottom: 14px; }
+  .stock-label { font-size: 0.85rem; font-weight: bold; color: var(--navy); margin-bottom: 4px; }
+  .stock-bar { display: flex; height: 24px; border-radius: 4px; overflow: hidden; background: var(--border); }
+  .stock-seg { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.72rem; font-weight: bold; }
   .hidden { display: none !important; }
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(26,46,74,0.6);
@@ -570,6 +576,21 @@
       </p>
       <div id="resumen-summary" class="summary-grid"></div>
     </div>
+    <div class="card">
+      <h3>Stock en vivo por expansión</h3>
+      <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
+        Solo cuenta cartas disponibles (no vendidas). Se actualiza solo al cargar o vender una carta.
+      </p>
+      <div class="stock-legend">
+        <span><i style="background:#2E86DE"></i>Unlimited</span>
+        <span><i style="background:#F1C40F"></i>Holo</span>
+        <span><i style="background:#27AE60"></i>Reverse</span>
+        <span><i style="background:#8E44AD"></i>FA</span>
+        <span><i style="background:#95A5A6"></i>IR</span>
+        <span><i style="background:#E74C3C"></i>SIR</span>
+      </div>
+      <div id="stock-expansion"></div>
+    </div>
   </section>
 </main>
 
@@ -816,7 +837,7 @@ async function addCompra() {
   setBusy("btn-compra", true, "Guardar compra");
   try {
     const result = await postSheet("Compras", isEdit ? "update" : "add", data, isEdit ? id : undefined);
-    if (result && result.error) {
+    if (result && result.error && result.error !== "respuesta_invalida") {
       alert("No se pudo confirmar el guardado con Google Sheets (" + result.error + "). La carta quedó visible en pantalla; revisá la planilla para confirmar que se guardó, y si no, volvé a cargarla.");
     }
     await safeRefresh("Compras", "Compras");
@@ -1155,6 +1176,60 @@ function renderResumen() {
     <div class="summary-box"><div class="label">Cartas vendidas</div><div class="value">${vendidasCompras} / ${DATA.Compras.length}</div></div>
     <div class="summary-box"><div class="label">Rentabilidad TOTAL (Compras/Ventas)</div><div class="value">$${rentCompras.toFixed(2)}</div></div>
   `;
+  renderStockPorExpansion();
+}
+
+const TIPO_COLORS = {
+  "Unlimited": "#2E86DE",
+  "Holo": "#F1C40F",
+  "Reverse": "#27AE60",
+  "FA": "#8E44AD",
+  "IR": "#95A5A6",
+  "SIR": "#E74C3C"
+};
+const TIPO_ORDER = ["Unlimited", "Holo", "Reverse", "FA", "IR", "SIR"];
+const COLOR_OTRO = "#5A6B7D";
+
+function renderStockPorExpansion() {
+  const div = document.getElementById("stock-expansion");
+  if (!div) return;
+
+  // Solo stock disponible: cartas de Compras que todavía NO tienen venta registrada
+  const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo));
+
+  const porExpansion = {};
+  disponibles.forEach(c => {
+    const exp = c.Expansion || "Sin expansión";
+    const tipo = c.TipoCarta || "Sin tipo";
+    if (!porExpansion[exp]) porExpansion[exp] = {};
+    porExpansion[exp][tipo] = (porExpansion[exp][tipo] || 0) + 1;
+  });
+
+  const entries = Object.entries(porExpansion)
+    .map(([exp, tipos]) => ({ exp, tipos, total: Object.values(tipos).reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.total - a.total);
+
+  if (entries.length === 0) {
+    div.innerHTML = '<p style="font-size:0.85rem;color:var(--navy-light)">Todavía no hay stock disponible cargado.</p>';
+    return;
+  }
+
+  let html = "";
+  entries.forEach(({ exp, tipos, total }) => {
+    html += `<div class="stock-row">
+      <div class="stock-label">${exp} — ${total}</div>
+      <div class="stock-bar">`;
+    const tiposOrdenados = [...TIPO_ORDER, ...Object.keys(tipos).filter(t => !TIPO_ORDER.includes(t))];
+    tiposOrdenados.forEach(tipo => {
+      const count = tipos[tipo];
+      if (!count) return;
+      const pct = (count / total * 100).toFixed(2);
+      const color = TIPO_COLORS[tipo] || COLOR_OTRO;
+      html += `<div class="stock-seg" style="width:${pct}%; background:${color}" title="${tipo}: ${count}">${count}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  div.innerHTML = html;
 }
 
 loadAll();

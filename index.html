@@ -64,6 +64,8 @@
   .del-btn:hover { color: #a8321f; }
   .edit-btn { background: none; border: none; color: var(--navy-light); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
   .edit-btn:hover { color: var(--navy); }
+  .dup-btn { background: none; border: none; color: var(--gold); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+  .dup-btn:hover { color: #b87c00; }
   .hidden { display: none !important; }
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(26,46,74,0.6);
@@ -642,6 +644,29 @@ function editCompra(id) {
   document.getElementById("compra-modal-overlay").classList.remove("hidden");
 }
 
+function duplicateCompra(id) {
+  const c = DATA.Compras.find(x => x.ID === id);
+  if (!c) return;
+  resetCompraForm();
+  editingCompraId = null; // queda como alta nueva, no como edición
+  document.getElementById("compra-modal-title").textContent = "Duplicar compra";
+  document.getElementById("c-fecha").value = c.FechaCompra || "";
+  document.getElementById("c-envio").value = c.EstadoEnvio || "";
+  document.getElementById("c-nombre").value = c.NombrePokemon || "";
+  document.getElementById("c-tipo").value = c.TipoCarta || "";
+  document.getElementById("c-idioma").value = c.Idioma || "";
+  document.getElementById("c-expansion").value = c.Expansion || "";
+  document.getElementById("c-numero").value = c.NumeroCarta || "";
+  document.getElementById("c-graded").value = c.Graded || "";
+  document.getElementById("c-calificacion").value = c.Calificacion || "";
+  document.getElementById("c-empresa").value = c.EmpresaGradeadora || "";
+  document.getElementById("c-precio").value = c.PrecioCompra || "";
+  document.getElementById("c-pagocon").value = c.Tarjeta || "";
+  document.getElementById("c-canal").value = c.CanalCompra || "";
+  toggleGraded();
+  document.getElementById("compra-modal-overlay").classList.remove("hidden");
+}
+
 function checkConfig() {
   if (!API_URL || API_URL.indexOf("PEGA_AQUI") !== -1) {
     document.getElementById("config-warning").style.display = "block";
@@ -835,7 +860,7 @@ function renderCompras() {
     const rentabPct = venta && compra ? ((precioVenta - compra) / compra * 100) : null;
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
-      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button>` : ""}</td>
+      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button><button class="dup-btn" onclick="duplicateCompra('${c.ID}')">⧉</button>` : ""}</td>
       <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
       <td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td><td>${c.CanalCompra||""}</td>

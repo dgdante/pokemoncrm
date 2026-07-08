@@ -715,9 +715,19 @@ async function loadAll() {
     DATA.SubastasEventos = eventos.error ? [] : eventos;
   }
 
-  const sinId = DATA.Compras.filter(c => !c.ID).length + DATA.Cartera.filter(c => !c.ID).length;
-  if (sinId > 0) {
-    showAppWarning(`Hay ${sinId} fila(s) sin ID (por eso no tienen botón de editar/borrar). En Apps Script, elegí la función "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶) para arreglarlo.`);
+  const comprasSinId = DATA.Compras.filter(c => !c.ID);
+  const carteraSinId = DATA.Cartera.filter(c => !c.ID);
+  const ventasSinId = DATA.Subastas.filter(c => !c.ID);
+  const pagosSinId = DATA.Pagos.filter(c => !c.ID);
+  const eventosSinId = DATA.SubastasEventos.filter(c => !c.ID);
+  const partes = [];
+  if (comprasSinId.length) partes.push(`Compras: ${comprasSinId.length} (${comprasSinId.map(c => c.Codigo || c.NombrePokemon || "sin nombre").join(", ")})`);
+  if (carteraSinId.length) partes.push(`Cartera: ${carteraSinId.length} (${carteraSinId.map(c => c.Codigo || c.NombreProducto || "sin nombre").join(", ")})`);
+  if (ventasSinId.length) partes.push(`Ventas: ${ventasSinId.length}`);
+  if (pagosSinId.length) partes.push(`Pagos: ${pagosSinId.length}`);
+  if (eventosSinId.length) partes.push(`Subastas: ${eventosSinId.length}`);
+  if (partes.length > 0) {
+    showAppWarning(`Filas sin ID (por eso no tienen botón de editar/borrar) — ${partes.join(" | ")}. En Apps Script, elegí "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶).`);
   }
 
   renderAll();

@@ -306,13 +306,17 @@
       </div>
     </div>
     <div class="card">
+      <h3>Estado de envíos</h3>
+      <div id="envio-summary" class="summary-grid"></div>
+    </div>
+    <div class="card">
       <div class="list-head">
         <h3>Listado de compras</h3>
         <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
       </div>
       <div class="table-wrap tall"><table id="tabla-compras"><thead><tr>
         <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
-        <th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Canal</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
+        <th>N° Carta</th><th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -642,13 +646,23 @@ function closeCompraModal() {
   document.getElementById("compra-modal-overlay").classList.add("hidden");
 }
 
+function toDateInputValue(str) {
+  if (!str) return "";
+  const soloFecha = String(str).split("T")[0];
+  const partes = soloFecha.split("-");
+  if (partes.length !== 3) return "";
+  const [y, m, d] = partes;
+  if (!y || !m || !d) return "";
+  return `${y.padStart(4,"0")}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+}
+
 function editCompra(id) {
   const c = DATA.Compras.find(x => x.ID === id);
   if (!c) return;
   resetCompraForm();
   editingCompraId = id;
   document.getElementById("compra-modal-title").textContent = "Editar compra";
-  document.getElementById("c-fecha").value = c.FechaCompra || "";
+  document.getElementById("c-fecha").value = toDateInputValue(c.FechaCompra);
   document.getElementById("c-envio").value = c.EstadoEnvio || "";
   document.getElementById("c-nombre").value = c.NombrePokemon || "";
   document.getElementById("c-tipo").value = c.TipoCarta || "";
@@ -671,7 +685,7 @@ function duplicateCompra(id) {
   resetCompraForm();
   editingCompraId = null; // queda como alta nueva, no como edición
   document.getElementById("compra-modal-title").textContent = "Duplicar compra";
-  document.getElementById("c-fecha").value = c.FechaCompra || "";
+  document.getElementById("c-fecha").value = toDateInputValue(c.FechaCompra);
   document.getElementById("c-envio").value = c.EstadoEnvio || "";
   document.getElementById("c-nombre").value = c.NombrePokemon || "";
   document.getElementById("c-tipo").value = c.TipoCarta || "";
@@ -859,6 +873,15 @@ async function deleteCompra(id) {
   renderCompras(); renderResumen(); renderTarjetas();
 }
 
+function formatDateDisplay(str) {
+  if (!str) return "";
+  const soloFecha = String(str).split("T")[0]; // por si quedara algún timestamp viejo
+  const partes = soloFecha.split("-");
+  if (partes.length !== 3) return soloFecha;
+  const [y, m, d] = partes;
+  return `${d}/${m}/${y}`;
+}
+
 function renderCompras() {
   const tbody = document.querySelector("#tabla-compras tbody");
   tbody.innerHTML = "";
@@ -868,10 +891,22 @@ function renderCompras() {
     : DATA.Compras;
   lista = [...lista].sort((a, b) => {
     if (!a.FechaCompra && !b.FechaCompra) return 0;
-    if (!a.FechaCompra) return 1;   // sin fecha, al final
+    if (!a.FechaCompra) return 1;   // sin fecha, siempre al final
     if (!b.FechaCompra) return -1;
-    return a.FechaCompra.localeCompare(b.FechaCompra);
+    return b.FechaCompra.localeCompare(a.FechaCompra); // más reciente primero
   });
+
+  const conteoEnvio = { "En Tránsito": 0, "UK": 0, "Casa": 0 };
+  DATA.Compras.forEach(c => { if (conteoEnvio[c.EstadoEnvio] !== undefined) conteoEnvio[c.EstadoEnvio]++; });
+  const envioDiv = document.getElementById("envio-summary");
+  if (envioDiv) {
+    envioDiv.innerHTML = `
+      <div class="summary-box"><div class="label">En Tránsito</div><div class="value">${conteoEnvio["En Tránsito"]}</div></div>
+      <div class="summary-box"><div class="label">UK</div><div class="value">${conteoEnvio["UK"]}</div></div>
+      <div class="summary-box"><div class="label">Casa</div><div class="value">${conteoEnvio["Casa"]}</div></div>
+    `;
+  }
+
   lista.forEach(c => {
     const venta = findVenta(c.Codigo);
     const estado = venta ? "Vendido" : "Disponible";
@@ -882,9 +917,9 @@ function renderCompras() {
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
       <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button><button class="dup-btn" onclick="duplicateCompra('${c.ID}')">⧉</button>` : ""}</td>
-      <td>${c.Codigo}</td><td>${c.FechaCompra||""}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
+      <td>${c.Codigo}</td><td>${formatDateDisplay(c.FechaCompra)}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
-      <td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td><td>${c.CanalCompra||""}</td>
+      <td>${c.NumeroCarta||""}</td><td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td>
       <td><span class="badge ${estado==='Vendido'?'vendido':'disponible'}">${estado}</span></td>
       <td>${precioVenta!==null ? "$"+precioVenta.toFixed(2) : ""}</td>
       <td>${rentabPct!==null ? rentabPct.toFixed(1)+"%" : ""}</td>
@@ -1147,6 +1182,17 @@ function renderTarjetas() {
     const gastadoCompras = DATA.Compras.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
     const gastadoCartera = DATA.Cartera.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
     const gastado = gastadoCompras + gastadoCartera;
+    if (card === "EFT") {
+      html += `
+        <div class="pm-card">
+          <h4>${card}</h4>
+          <div class="pm-stats">
+            <div class="pm-stat"><div class="label">Gastado</div><div class="value">$${gastado.toFixed(2)}</div></div>
+          </div>
+        </div>
+      `;
+      return;
+    }
     const pagado = DATA.Pagos.filter(p => p.Tarjeta === card).reduce((a,p)=>a+(parseFloat(p.Monto)||0),0);
     const saldo = gastado - pagado;
     html += `

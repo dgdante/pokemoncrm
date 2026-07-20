@@ -312,7 +312,16 @@
     <div class="card">
       <div class="list-head">
         <h3>Listado de compras</h3>
-        <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <select id="c-filtro-envio" class="search-inline" style="max-width:160px" onchange="renderCompras()">
+            <option value="">Todos los envíos</option>
+            <option value="En Tránsito">En Tránsito</option>
+            <option value="UK">UK</option>
+            <option value="Casa">Casa</option>
+          </select>
+          <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
+          <button class="secondary" style="margin-top:0" onclick="generarReporteWord()">📄 Reporte (Word)</button>
+        </div>
       </div>
       <div class="table-wrap tall"><table id="tabla-compras"><thead><tr>
         <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
@@ -882,13 +891,64 @@ function formatDateDisplay(str) {
   return `${d}/${m}/${y}`;
 }
 
+function generarReporteWord() {
+  const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo));
+  if (disponibles.length === 0) {
+    alert("No hay cartas disponibles para incluir en el reporte.");
+    return;
+  }
+
+  const filas = disponibles.map(c => `
+    <tr>
+      <td style="padding:6px; border:1px solid #ccc;">${c.NombrePokemon || ""}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${c.NumeroCarta || ""}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${c.TipoCarta || ""}</td>
+      <td style="padding:6px; border:1px solid #ccc;">${c.Expansion || ""}</td>
+    </tr>`).join("");
+
+  const fechaHoy = new Date().toLocaleDateString("es-AR");
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Stock Disponible</title></head>
+<body style="font-family:Arial, sans-serif;">
+  <h2 style="color:#1A2E4A;">Stock Disponible — Pokémon</h2>
+  <p style="color:#555;">Actualizado al ${fechaHoy}</p>
+  <table style="border-collapse:collapse; width:100%; font-size:11pt;">
+    <thead>
+      <tr style="background:#1A2E4A; color:white;">
+        <th style="padding:6px; border:1px solid #ccc; text-align:left;">Pokémon</th>
+        <th style="padding:6px; border:1px solid #ccc; text-align:left;">N° Carta</th>
+        <th style="padding:6px; border:1px solid #ccc; text-align:left;">Tipo</th>
+        <th style="padding:6px; border:1px solid #ccc; text-align:left;">Expansión</th>
+      </tr>
+    </thead>
+    <tbody>${filas}</tbody>
+  </table>
+</body>
+</html>`;
+
+  const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Stock_Disponible_${new Date().toISOString().split("T")[0]}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function renderCompras() {
   const tbody = document.querySelector("#tabla-compras tbody");
   tbody.innerHTML = "";
   const q = (document.getElementById("c-buscar")?.value || "").toLowerCase().trim();
+  const filtroEnvio = document.getElementById("c-filtro-envio")?.value || "";
   let lista = q
     ? DATA.Compras.filter(c => (c.NombrePokemon||"").toLowerCase().includes(q) || (c.Expansion||"").toLowerCase().includes(q) || (c.Codigo||"").toLowerCase().includes(q))
     : DATA.Compras;
+  if (filtroEnvio) {
+    lista = lista.filter(c => c.EstadoEnvio === filtroEnvio);
+  }
   lista = [...lista].sort((a, b) => {
     if (!a.FechaCompra && !b.FechaCompra) return 0;
     if (!a.FechaCompra) return 1;   // sin fecha, siempre al final

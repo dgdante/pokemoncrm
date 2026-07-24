@@ -325,7 +325,7 @@
       </div>
       <div class="table-wrap tall"><table id="tabla-compras"><thead><tr>
         <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
-        <th>N° Carta</th><th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Estado</th><th>Venta (USD)</th><th>Rentab. %</th><th>Rentab. USD</th>
+        <th>N° Carta</th><th>Graded</th><th>Compra (USD)</th><th>Pago con</th><th>Estado</th><th>Venta (USD)</th><th>Días en Venta</th><th>Rentab. %</th><th>Rentab. USD</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -342,7 +342,7 @@
         </div>
         <div><label>Canal</label><select id="s-canal" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
-<option>Subasta WhatsApp</option><option>Instagram Directa</option></select></div>
+<option>Subasta WhatsApp</option><option>Instagram Directa</option><option>TCGFans</option><option>Adelanto x WhatsApp</option></select></div>
         <div><label>Evento de subasta (opcional)</label>
           <select id="s-evento" autocomplete="off"><option value="">Venta directa (sin evento)</option></select>
         </div>
@@ -891,6 +891,15 @@ function formatDateDisplay(str) {
   return `${d}/${m}/${y}`;
 }
 
+function diasEntreFechas(fechaInicio, fechaFin) {
+  if (!fechaInicio || !fechaFin) return null;
+  const d1 = new Date(String(fechaInicio).split("T")[0] + "T00:00:00");
+  const d2 = new Date(String(fechaFin).split("T")[0] + "T00:00:00");
+  if (isNaN(d1) || isNaN(d2)) return null;
+  const dias = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  return dias >= 0 ? dias : null;
+}
+
 function generarReporteWord() {
   const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo));
   if (disponibles.length === 0) {
@@ -947,7 +956,7 @@ function renderCompras() {
     ? DATA.Compras.filter(c => (c.NombrePokemon||"").toLowerCase().includes(q) || (c.Expansion||"").toLowerCase().includes(q) || (c.Codigo||"").toLowerCase().includes(q))
     : DATA.Compras;
   if (filtroEnvio) {
-    lista = lista.filter(c => c.EstadoEnvio === filtroEnvio);
+    lista = lista.filter(c => c.EstadoEnvio === filtroEnvio && !findVenta(c.Codigo));
   }
   lista = [...lista].sort((a, b) => {
     if (!a.FechaCompra && !b.FechaCompra) return 0;
@@ -957,7 +966,10 @@ function renderCompras() {
   });
 
   const conteoEnvio = { "En Tránsito": 0, "UK": 0, "Casa": 0 };
-  DATA.Compras.forEach(c => { if (conteoEnvio[c.EstadoEnvio] !== undefined) conteoEnvio[c.EstadoEnvio]++; });
+  DATA.Compras.forEach(c => {
+    if (findVenta(c.Codigo)) return; // vendida: no cuenta como stock en tránsito/UK/casa
+    if (conteoEnvio[c.EstadoEnvio] !== undefined) conteoEnvio[c.EstadoEnvio]++;
+  });
   const envioDiv = document.getElementById("envio-summary");
   if (envioDiv) {
     envioDiv.innerHTML = `
@@ -974,14 +986,16 @@ function renderCompras() {
     const precioVenta = venta ? parseFloat(venta.PrecioVenta) : null;
     const rentabUsd = venta ? (precioVenta - compra) : null;
     const rentabPct = venta && compra ? ((precioVenta - compra) / compra * 100) : null;
+    const diasEnVenta = venta ? diasEntreFechas(c.FechaCompra, venta.FechaVenta) : null;
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
       <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button><button class="dup-btn" onclick="duplicateCompra('${c.ID}')">⧉</button>` : ""}</td>
-      <td>${c.Codigo}</td><td>${formatDateDisplay(c.FechaCompra)}</td><td>${c.EstadoEnvio||""}</td><td>${c.NombrePokemon||""}</td>
+      <td>${c.Codigo}</td><td>${formatDateDisplay(c.FechaCompra)}</td><td>${venta ? "" : (c.EstadoEnvio||"")}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
       <td>${c.NumeroCarta||""}</td><td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td>
       <td><span class="badge ${estado==='Vendido'?'vendido':'disponible'}">${estado}</span></td>
       <td>${precioVenta!==null ? "$"+precioVenta.toFixed(2) : ""}</td>
+      <td>${diasEnVenta!==null ? diasEnVenta + " día" + (diasEnVenta===1?"":"s") : ""}</td>
       <td>${rentabPct!==null ? rentabPct.toFixed(1)+"%" : ""}</td>
       <td>${rentabUsd!==null ? "$"+rentabUsd.toFixed(2) : ""}</td>
     </tr>`;

@@ -333,6 +333,10 @@
   <!-- VENTAS (hoja backend: Subastas) -->
   <section id="tab-ventas" class="tab">
     <div class="card">
+      <h3>Promedios de venta</h3>
+      <div id="ventas-promedios" class="summary-grid"></div>
+    </div>
+    <div class="card">
       <h3>Nueva venta</h3>
       <div class="form-grid">
         <div><label>Fecha de venta</label><input type="date" id="s-fecha" autocomplete="off"></div>
@@ -967,16 +971,20 @@ function renderCompras() {
   });
 
   const conteoEnvio = { "En Tránsito": 0, "UK": 0, "Casa": 0 };
+  const montoEnvio = { "En Tránsito": 0, "UK": 0, "Casa": 0 };
   DATA.Compras.forEach(c => {
     if (findVenta(c.Codigo)) return; // vendida: no cuenta como stock en tránsito/UK/casa
-    if (conteoEnvio[c.EstadoEnvio] !== undefined) conteoEnvio[c.EstadoEnvio]++;
+    if (conteoEnvio[c.EstadoEnvio] !== undefined) {
+      conteoEnvio[c.EstadoEnvio]++;
+      montoEnvio[c.EstadoEnvio] += parseFloat(c.PrecioCompra) || 0;
+    }
   });
   const envioDiv = document.getElementById("envio-summary");
   if (envioDiv) {
     envioDiv.innerHTML = `
-      <div class="summary-box"><div class="label">En Tránsito</div><div class="value">${conteoEnvio["En Tránsito"]}</div></div>
-      <div class="summary-box"><div class="label">UK</div><div class="value">${conteoEnvio["UK"]}</div></div>
-      <div class="summary-box"><div class="label">Casa</div><div class="value">${conteoEnvio["Casa"]}</div></div>
+      <div class="summary-box"><div class="label">En Tránsito</div><div class="value">${conteoEnvio["En Tránsito"]}</div><div class="label" style="margin-top:4px">$${montoEnvio["En Tránsito"].toFixed(2)}</div></div>
+      <div class="summary-box"><div class="label">UK</div><div class="value">${conteoEnvio["UK"]}</div><div class="label" style="margin-top:4px">$${montoEnvio["UK"].toFixed(2)}</div></div>
+      <div class="summary-box"><div class="label">Casa</div><div class="value">${conteoEnvio["Casa"]}</div><div class="label" style="margin-top:4px">$${montoEnvio["Casa"].toFixed(2)}</div></div>
     `;
   }
 
@@ -1135,6 +1143,9 @@ function renderVentas() {
 
   const tbody = document.querySelector("#tabla-ventas tbody");
   tbody.innerHTML = "";
+  let sumaRentabPct = 0, cantRentabPct = 0;
+  let sumaDias = 0, cantDias = 0;
+  let sumaGanancia = 0;
   DATA.Subastas.forEach(s => {
     const c = findCompraPorCodigo(s.Codigo);
     const evento = DATA.SubastasEventos.find(ev => ev.ID === s.EventoID);
@@ -1143,6 +1154,9 @@ function renderVentas() {
     const rentabUsd = compra !== null ? (precioVenta - compra) : null;
     const rentabPct = compra ? ((precioVenta - compra) / compra * 100) : null;
     const dias = c ? diasEntreFechas(c.FechaCompra, s.FechaVenta) : null;
+    if (rentabPct !== null) { sumaRentabPct += rentabPct; cantRentabPct++; }
+    if (dias !== null) { sumaDias += dias; cantDias++; }
+    if (rentabUsd !== null) sumaGanancia += rentabUsd;
     tbody.innerHTML += `<tr>
       <td>${s.ID ? `<button class="del-btn" onclick="deleteVenta('${s.ID}')">✕</button>` : ""}</td>
       <td>${formatDateDisplay(s.FechaVenta)}</td><td>${s.Codigo||""}</td>
@@ -1157,6 +1171,16 @@ function renderVentas() {
       <td>${s.Notas||""}</td>
     </tr>`;
   });
+
+  const promDiv = document.getElementById("ventas-promedios");
+  if (promDiv) {
+    promDiv.innerHTML = `
+      <div class="summary-box"><div class="label">Ventas totales</div><div class="value">${DATA.Subastas.length}</div></div>
+      <div class="summary-box"><div class="label">Plata ganada TOTAL</div><div class="value">$${sumaGanancia.toFixed(2)}</div></div>
+      <div class="summary-box"><div class="label">Rentabilidad promedio</div><div class="value">${cantRentabPct ? (sumaRentabPct/cantRentabPct).toFixed(1)+"%" : "—"}</div></div>
+      <div class="summary-box"><div class="label">Días promedio hasta vender</div><div class="value">${cantDias ? (sumaDias/cantDias).toFixed(1) : "—"}</div></div>
+    `;
+  }
 }
 
 /* ---------- SUBASTAS (eventos con rentabilidad) ---------- */
@@ -1300,13 +1324,30 @@ function renderResumen() {
   const investCompras = DATA.Compras.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
   const investCartera = DATA.Cartera.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
   let rentCompras = 0, vendidasCompras = 0;
-  DATA.Compras.forEach(c => { const v = findVenta(c.Codigo); if (v) { vendidasCompras++; rentCompras += parseFloat(v.PrecioVenta)-parseFloat(c.PrecioCompra); } });
+  let sumaRentabPct = 0, cantRentabPct = 0;
+  let sumaDias = 0, cantDias = 0;
+  DATA.Compras.forEach(c => {
+    const v = findVenta(c.Codigo);
+    if (!v) return;
+    vendidasCompras++;
+    const compra = parseFloat(c.PrecioCompra) || 0;
+    const venta = parseFloat(v.PrecioVenta) || 0;
+    rentCompras += venta - compra;
+    if (compra) { sumaRentabPct += (venta - compra) / compra * 100; cantRentabPct++; }
+    const dias = diasEntreFechas(c.FechaCompra, v.FechaVenta);
+    if (dias !== null) { sumaDias += dias; cantDias++; }
+  });
+  const rentabPromedio = cantRentabPct ? (sumaRentabPct / cantRentabPct) : null;
+  const diasPromedio = cantDias ? (sumaDias / cantDias) : null;
+
   const div = document.getElementById("resumen-summary");
   div.innerHTML = `
     <div class="summary-box"><div class="label">Invertido en Compras</div><div class="value">$${investCompras.toFixed(2)}</div></div>
     <div class="summary-box"><div class="label">Invertido en Cartera (no cuenta en rentabilidad)</div><div class="value">$${investCartera.toFixed(2)}</div></div>
     <div class="summary-box"><div class="label">Cartas vendidas</div><div class="value">${vendidasCompras} / ${DATA.Compras.length}</div></div>
-    <div class="summary-box"><div class="label">Rentabilidad TOTAL (Compras/Ventas)</div><div class="value">$${rentCompras.toFixed(2)}</div></div>
+    <div class="summary-box"><div class="label">Plata ganada TOTAL (Venta - Compra)</div><div class="value">$${rentCompras.toFixed(2)}</div></div>
+    <div class="summary-box"><div class="label">Rentabilidad promedio</div><div class="value">${rentabPromedio!==null ? rentabPromedio.toFixed(1)+"%" : "—"}</div></div>
+    <div class="summary-box"><div class="label">Días promedio hasta vender</div><div class="value">${diasPromedio!==null ? diasPromedio.toFixed(1) : "—"}</div></div>
   `;
   renderStockPorExpansion();
 }

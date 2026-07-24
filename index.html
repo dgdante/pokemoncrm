@@ -356,7 +356,8 @@
     <div class="card">
       <h3>Listado de ventas</h3>
       <div class="table-wrap"><table id="tabla-ventas"><thead><tr>
-        <th></th><th>Fecha</th><th>Código</th><th>Pokémon</th><th>Expansión</th><th>Canal</th><th>Evento</th><th>Comprador</th><th>Precio (USD)</th><th>Notas</th>
+        <th></th><th>Fecha</th><th>Código</th><th>Pokémon</th><th>Expansión</th><th>Canal</th><th>Evento</th><th>Comprador</th>
+        <th>Compra (USD)</th><th>Venta (USD)</th><th>Días en Venta</th><th>Rentab. %</th><th>Rentab. USD</th><th>Notas</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -1137,12 +1138,23 @@ function renderVentas() {
   DATA.Subastas.forEach(s => {
     const c = findCompraPorCodigo(s.Codigo);
     const evento = DATA.SubastasEventos.find(ev => ev.ID === s.EventoID);
+    const precioVenta = parseFloat(s.PrecioVenta) || 0;
+    const compra = c ? (parseFloat(c.PrecioCompra) || 0) : null;
+    const rentabUsd = compra !== null ? (precioVenta - compra) : null;
+    const rentabPct = compra ? ((precioVenta - compra) / compra * 100) : null;
+    const dias = c ? diasEntreFechas(c.FechaCompra, s.FechaVenta) : null;
     tbody.innerHTML += `<tr>
       <td>${s.ID ? `<button class="del-btn" onclick="deleteVenta('${s.ID}')">✕</button>` : ""}</td>
-      <td>${s.FechaVenta||""}</td><td>${s.Codigo||""}</td>
+      <td>${formatDateDisplay(s.FechaVenta)}</td><td>${s.Codigo||""}</td>
       <td>${c ? c.NombrePokemon : ""}</td><td>${c ? c.Expansion : ""}</td>
       <td>${s.CanalVenta||""}</td><td>${evento ? evento.Nombre : ""}</td>
-      <td>${s.Comprador||""}</td><td>$${Number(s.PrecioVenta||0).toFixed(2)}</td><td>${s.Notas||""}</td>
+      <td>${s.Comprador||""}</td>
+      <td>${compra!==null ? "$"+compra.toFixed(2) : ""}</td>
+      <td>$${precioVenta.toFixed(2)}</td>
+      <td>${dias!==null ? dias + " día" + (dias===1?"":"s") : ""}</td>
+      <td>${rentabPct!==null ? rentabPct.toFixed(1)+"%" : ""}</td>
+      <td>${rentabUsd!==null ? "$"+rentabUsd.toFixed(2) : ""}</td>
+      <td>${s.Notas||""}</td>
     </tr>`;
   });
 }

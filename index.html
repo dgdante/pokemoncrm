@@ -104,6 +104,7 @@
 
 <nav>
   <button class="tab-btn active" data-tab="compras">Compras</button>
+  <button class="tab-btn" data-tab="lotes">Lotes</button>
   <button class="tab-btn" data-tab="ventas">Ventas</button>
   <button class="tab-btn" data-tab="subastas">Subastas</button>
   <button class="tab-btn" data-tab="tarjetas">Tarjetas</button>
@@ -119,7 +120,21 @@
   <!-- COMPRAS -->
   <section id="tab-compras" class="tab active">
     <div class="card">
-      <button class="primary" onclick="openCompraModal()">+ Nueva compra</button>
+      <button class="primary" onclick="openChoiceModal()">+ Nueva compra</button>
+    </div>
+
+    <!-- Popup de elección: Single vs Lote -->
+    <div id="choice-modal-overlay" class="modal-overlay hidden">
+      <div class="modal-box" style="max-width:420px">
+        <div class="modal-head">
+          <h3>¿Cómo querés cargarla?</h3>
+          <button class="modal-close" onclick="closeChoiceModal()">✕</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px">
+          <button class="primary" style="margin-top:0" onclick="chooseSingle()">🃏 Single — carta por carta, con todos los datos</button>
+          <button class="primary" style="margin-top:0; background:var(--navy-light)" onclick="chooseLote()">📦 Lote — compra en bloque, sin desglosar cada carta</button>
+        </div>
+      </div>
     </div>
 
     <div id="compra-modal-overlay" class="modal-overlay hidden">
@@ -330,6 +345,36 @@
     </div>
   </section>
 
+  <!-- LOTES -->
+  <section id="tab-lotes" class="tab">
+    <div class="card">
+      <h3>Nuevo lote</h3>
+      <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
+        Para compras en bloque que todavía no separaste carta por carta.
+      </p>
+      <div class="form-grid">
+        <div><label>Fecha de compra</label><input type="date" id="l-fecha" autocomplete="off"></div>
+        <div><label>Monto de compra (USD)</label><input type="number" id="l-monto" step="0.01" autocomplete="off"></div>
+        <div><label>Vendedor</label><input id="l-vendedor" placeholder="A quién se lo compraste" autocomplete="off"></div>
+        <div><label>Pago con</label>
+          <select id="l-pagocon" autocomplete="off"><option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select>
+        </div>
+        <div><label>Notas</label><input id="l-notas" autocomplete="off"></div>
+      </div>
+      <button class="primary" id="btn-lote" onclick="addLote()">Guardar lote</button>
+    </div>
+    <div class="card">
+      <h3>Resumen de lotes</h3>
+      <div id="lotes-summary" class="summary-grid"></div>
+    </div>
+    <div class="card">
+      <h3>Listado de lotes</h3>
+      <div class="table-wrap"><table id="tabla-lotes"><thead><tr>
+        <th></th><th>Código</th><th>Fecha</th><th>Compra (USD)</th><th>Vendedor</th><th>Pago con</th><th>Vendido (USD)</th><th>Saldo (USD)</th><th>Notas</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
   <!-- VENTAS (hoja backend: Subastas) -->
   <section id="tab-ventas" class="tab">
     <div class="card">
@@ -341,8 +386,12 @@
       <div class="form-grid">
         <div><label>Fecha de venta</label><input type="date" id="s-fecha" autocomplete="off"></div>
         <div>
-          <label>Código (de Compras)</label>
-          <input id="s-codigo" placeholder="C-001" autocomplete="off" oninput="previewVentaCodigo()">
+          <label>Código (de Compras o Lotes)</label>
+          <input id="s-codigo" placeholder="C-001 o L-1" autocomplete="off" oninput="previewVentaCodigo()">
+        </div>
+        <div id="s-carta-lote-field" class="hidden">
+          <label>Carta (del lote)</label>
+          <input id="s-carta-lote" placeholder="Cuál carta del lote vendiste" autocomplete="off">
         </div>
         <div><label>Canal</label><select id="s-canal" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
@@ -617,7 +666,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxxfvR86YyBkJizmFDVS51WdKmlyT-1hiN7kXefrt3Niw5OpXH3cmTov3jsgpQwIzi2/exec";
 /* ============================== */
 
-let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [], SubastasEventos: [] };
+let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [], SubastasEventos: [], Lotes: [] };
 const CARDS = ["Marian UK", "Costi MasterCard", "Costi Platinum", "EFT"];
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -648,6 +697,25 @@ function resetCompraForm() {
 }
 
 let editingCompraId = null;
+
+function openChoiceModal() {
+  document.getElementById("choice-modal-overlay").classList.remove("hidden");
+}
+function closeChoiceModal() {
+  document.getElementById("choice-modal-overlay").classList.add("hidden");
+}
+function chooseSingle() {
+  closeChoiceModal();
+  openCompraModal();
+}
+function chooseLote() {
+  closeChoiceModal();
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector('.tab-btn[data-tab="lotes"]').classList.add("active");
+  document.getElementById("tab-lotes").classList.add("active");
+  document.getElementById("l-fecha")?.focus();
+}
 
 function openCompraModal() {
   editingCompraId = null;
@@ -775,18 +843,20 @@ async function loadAll() {
     DATA.Subastas = all.Subastas || [];
     DATA.Pagos = all.Pagos || [];
     DATA.SubastasEventos = all.SubastasEventos || [];
+    DATA.Lotes = all.Lotes || [];
   } else {
     // Respaldo por si el Apps Script todavía no tiene el modo "ALL" (versión vieja sin actualizar)
     console.warn("Carga combinada falló, probando hoja por hoja...");
     showAppWarning("Tu Apps Script parece estar en una versión vieja (no reconoce la carga combinada). Actualizalo: pegá el Code.gs más reciente en Apps Script y hacé Nueva versión → Implementar.");
-    const [compras, cartera, subastas, pagos, eventos] = await Promise.all([
-      fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos"), fetchSheet("SubastasEventos")
+    const [compras, cartera, subastas, pagos, eventos, lotes] = await Promise.all([
+      fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos"), fetchSheet("SubastasEventos"), fetchSheet("Lotes")
     ]);
     DATA.Compras = compras.error ? [] : compras;
     DATA.Cartera = cartera.error ? [] : cartera;
     DATA.Subastas = subastas.error ? [] : subastas;
     DATA.Pagos = pagos.error ? [] : pagos;
     DATA.SubastasEventos = eventos.error ? [] : eventos;
+    DATA.Lotes = lotes.error ? [] : lotes;
   }
 
   const comprasSinId = DATA.Compras.filter(c => !c.ID);
@@ -794,12 +864,14 @@ async function loadAll() {
   const ventasSinId = DATA.Subastas.filter(c => !c.ID);
   const pagosSinId = DATA.Pagos.filter(c => !c.ID);
   const eventosSinId = DATA.SubastasEventos.filter(c => !c.ID);
+  const lotesSinId = DATA.Lotes.filter(c => !c.ID);
   const partes = [];
   if (comprasSinId.length) partes.push(`Compras: ${comprasSinId.length} (${comprasSinId.map(c => c.Codigo || c.NombrePokemon || "sin nombre").join(", ")})`);
   if (carteraSinId.length) partes.push(`Cartera: ${carteraSinId.length} (${carteraSinId.map(c => c.Codigo || c.NombreProducto || "sin nombre").join(", ")})`);
   if (ventasSinId.length) partes.push(`Ventas: ${ventasSinId.length}`);
   if (pagosSinId.length) partes.push(`Pagos: ${pagosSinId.length}`);
   if (eventosSinId.length) partes.push(`Subastas: ${eventosSinId.length}`);
+  if (lotesSinId.length) partes.push(`Lotes: ${lotesSinId.length}`);
   if (partes.length > 0) {
     showAppWarning(`Filas sin ID (por eso no tienen botón de editar/borrar) — ${partes.join(" | ")}. En Apps Script, elegí "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶).`);
   }
@@ -812,7 +884,7 @@ function showAppWarning(msg) {
   div.textContent = "⚠️ " + msg;
   div.style.display = "block";
 }
-function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderEventos(); }
+function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderEventos(); renderLotes(); }
 function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }
 function findVenta(codigo) { return DATA.Subastas.find(s => s.Codigo === codigo); }
 function setBusy(btnId, busy, label) {
@@ -1078,6 +1150,81 @@ function renderCartera() {
   div.innerHTML = html;
 }
 
+/* ---------- LOTES (compras en bloque, sin desglosar) ---------- */
+function nextLoteCode() { return "L-" + (DATA.Lotes.length + 1); }
+
+async function addLote() {
+  const id = newId();
+  const codigo = nextLoteCode();
+  const data = {
+    ID: id,
+    Codigo: codigo,
+    FechaCompra: document.getElementById("l-fecha").value,
+    MontoCompra: parseFloat(document.getElementById("l-monto").value) || 0,
+    Vendedor: document.getElementById("l-vendedor").value,
+    Tarjeta: document.getElementById("l-pagocon").value,
+    Notas: document.getElementById("l-notas").value
+  };
+  DATA.Lotes.push(data);
+  renderLotes(); renderTarjetas(); renderResumen();
+  ["l-fecha","l-monto","l-vendedor","l-notas"].forEach(i => document.getElementById(i).value = "");
+
+  setBusy("btn-lote", true, "Guardar lote");
+  try {
+    await postSheet("Lotes", "add", data);
+    await safeRefresh("Lotes", "Lotes");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al guardar. El lote quedó visible en pantalla, pero revisá la planilla para confirmar.");
+  } finally {
+    renderLotes(); renderTarjetas(); renderResumen();
+    setBusy("btn-lote", false, "Guardar lote");
+  }
+}
+
+async function deleteLote(id) {
+  if (!confirm("¿Borrar este lote?")) return;
+  DATA.Lotes = DATA.Lotes.filter(l => l.ID !== id);
+  renderLotes(); renderTarjetas(); renderResumen();
+  await postSheet("Lotes", "delete", null, id);
+  await safeRefresh("Lotes", "Lotes");
+  renderLotes(); renderTarjetas(); renderResumen();
+}
+
+function findLotePorCodigo(codigo) {
+  return DATA.Lotes.find(l => l.Codigo === codigo);
+}
+
+function renderLotes() {
+  const tbody = document.querySelector("#tabla-lotes tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  let total = 0, totalVendido = 0;
+  DATA.Lotes.forEach(l => {
+    const monto = parseFloat(l.MontoCompra) || 0;
+    const vendido = DATA.Subastas.filter(s => s.Codigo === l.Codigo).reduce((a,s)=>a+(parseFloat(s.PrecioVenta)||0),0);
+    const saldo = monto - vendido;
+    total += monto;
+    totalVendido += vendido;
+    tbody.innerHTML += `<tr>
+      <td>${l.ID ? `<button class="del-btn" onclick="deleteLote('${l.ID}')">✕</button>` : ""}</td>
+      <td>${l.Codigo||""}</td><td>${formatDateDisplay(l.FechaCompra)}</td><td>$${monto.toFixed(2)}</td>
+      <td>${l.Vendedor||""}</td><td>${l.Tarjeta||""}</td>
+      <td>$${vendido.toFixed(2)}</td>
+      <td style="${saldo<=0?'color:var(--green);font-weight:bold':''}">$${saldo.toFixed(2)}</td>
+      <td>${l.Notas||""}</td>
+    </tr>`;
+  });
+  const div = document.getElementById("lotes-summary");
+  if (div) {
+    div.innerHTML = `
+      <div class="summary-box"><div class="label">Lotes cargados</div><div class="value">${DATA.Lotes.length}</div></div>
+      <div class="summary-box"><div class="label">Invertido TOTAL en lotes</div><div class="value">$${total.toFixed(2)}</div></div>
+      <div class="summary-box"><div class="label">Recuperado TOTAL (vendido)</div><div class="value">$${totalVendido.toFixed(2)}</div></div>
+    `;
+  }
+}
+
 /* ---------- VENTAS (hoja backend: Subastas) ---------- */
 function findCompraPorCodigo(codigo) {
   return DATA.Compras.find(c => c.Codigo === codigo);
@@ -1086,9 +1233,22 @@ function findCompraPorCodigo(codigo) {
 function previewVentaCodigo() {
   const codigo = document.getElementById("s-codigo").value.trim();
   const div = document.getElementById("s-preview");
-  if (!codigo) { div.textContent = ""; return; }
+  const carteloteField = document.getElementById("s-carta-lote-field");
+
+  if (!codigo) { div.textContent = ""; carteloteField.classList.add("hidden"); return; }
+
+  const lote = findLotePorCodigo(codigo);
+  if (lote) {
+    carteloteField.classList.remove("hidden");
+    const vendidoHasta = DATA.Subastas.filter(s => s.Codigo === codigo).reduce((a,s)=>a+(parseFloat(s.PrecioVenta)||0),0);
+    const saldo = (parseFloat(lote.MontoCompra)||0) - vendidoHasta;
+    div.textContent = `Lote ${lote.Codigo} — comprado a $${Number(lote.MontoCompra||0).toFixed(2)}, recuperado $${vendidoHasta.toFixed(2)} hasta ahora, saldo pendiente $${saldo.toFixed(2)}.`;
+    return;
+  }
+
+  carteloteField.classList.add("hidden");
   const c = findCompraPorCodigo(codigo);
-  if (!c) { div.textContent = "No se encontró ninguna compra con ese código."; return; }
+  if (!c) { div.textContent = "No se encontró ninguna compra ni lote con ese código."; return; }
   const yaVendida = findVenta(codigo);
   div.textContent = `${c.NombrePokemon || ""} — ${c.Expansion || ""} (comprada a $${Number(c.PrecioCompra||0).toFixed(2)})`
     + (yaVendida ? " ⚠️ Este código ya tiene una venta registrada." : "");
@@ -1096,20 +1256,24 @@ function previewVentaCodigo() {
 
 async function addVenta() {
   const id = newId();
+  const codigo = document.getElementById("s-codigo").value;
+  const esLote = !!findLotePorCodigo(codigo);
   const data = {
     ID: id,
     FechaVenta: document.getElementById("s-fecha").value,
-    Codigo: document.getElementById("s-codigo").value,
+    Codigo: codigo,
     CanalVenta: document.getElementById("s-canal").value,
     Comprador: document.getElementById("s-comprador").value,
     PrecioVenta: parseFloat(document.getElementById("s-precio").value) || 0,
     Notas: document.getElementById("s-notas").value,
-    EventoID: document.getElementById("s-evento").value
+    EventoID: document.getElementById("s-evento").value,
+    CartaLote: esLote ? document.getElementById("s-carta-lote").value : ""
   };
   DATA.Subastas.push(data);
   renderAll();
-  ["s-codigo","s-comprador","s-precio","s-notas"].forEach(i => document.getElementById(i).value = "");
+  ["s-codigo","s-comprador","s-precio","s-notas","s-carta-lote"].forEach(i => document.getElementById(i).value = "");
   document.getElementById("s-preview").textContent = "";
+  document.getElementById("s-carta-lote-field").classList.add("hidden");
 
   setBusy("btn-venta", true, "Guardar venta");
   try {
@@ -1148,6 +1312,7 @@ function renderVentas() {
   let sumaGanancia = 0;
   DATA.Subastas.forEach(s => {
     const c = findCompraPorCodigo(s.Codigo);
+    const lote = findLotePorCodigo(s.Codigo);
     const evento = DATA.SubastasEventos.find(ev => ev.ID === s.EventoID);
     const precioVenta = parseFloat(s.PrecioVenta) || 0;
     const compra = c ? (parseFloat(c.PrecioCompra) || 0) : null;
@@ -1157,10 +1322,12 @@ function renderVentas() {
     if (rentabPct !== null) { sumaRentabPct += rentabPct; cantRentabPct++; }
     if (dias !== null) { sumaDias += dias; cantDias++; }
     if (rentabUsd !== null) sumaGanancia += rentabUsd;
+    const nombreCol = c ? c.NombrePokemon : (lote ? (s.CartaLote || "(sin especificar)") : "");
+    const expansionCol = c ? c.Expansion : (lote ? `Lote ${lote.Codigo}` : "");
     tbody.innerHTML += `<tr>
       <td>${s.ID ? `<button class="del-btn" onclick="deleteVenta('${s.ID}')">✕</button>` : ""}</td>
       <td>${formatDateDisplay(s.FechaVenta)}</td><td>${s.Codigo||""}</td>
-      <td>${c ? c.NombrePokemon : ""}</td><td>${c ? c.Expansion : ""}</td>
+      <td>${nombreCol}</td><td>${expansionCol}</td>
       <td>${s.CanalVenta||""}</td><td>${evento ? evento.Nombre : ""}</td>
       <td>${s.Comprador||""}</td>
       <td>${compra!==null ? "$"+compra.toFixed(2) : ""}</td>
@@ -1291,7 +1458,8 @@ function renderTarjetas() {
   CARDS.forEach(card => {
     const gastadoCompras = DATA.Compras.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
     const gastadoCartera = DATA.Cartera.filter(c => c.Tarjeta === card).reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
-    const gastado = gastadoCompras + gastadoCartera;
+    const gastadoLotes = DATA.Lotes.filter(l => l.Tarjeta === card).reduce((a,l)=>a+(parseFloat(l.MontoCompra)||0),0);
+    const gastado = gastadoCompras + gastadoCartera + gastadoLotes;
     if (card === "EFT") {
       html += `
         <div class="pm-card">
@@ -1323,6 +1491,7 @@ function renderTarjetas() {
 function renderResumen() {
   const investCompras = DATA.Compras.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
   const investCartera = DATA.Cartera.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+  const investLotes = DATA.Lotes.reduce((a,l)=>a+(parseFloat(l.MontoCompra)||0),0);
   let rentCompras = 0, vendidasCompras = 0;
   let sumaRentabPct = 0, cantRentabPct = 0;
   let sumaDias = 0, cantDias = 0;
@@ -1344,6 +1513,7 @@ function renderResumen() {
   div.innerHTML = `
     <div class="summary-box"><div class="label">Invertido en Compras</div><div class="value">$${investCompras.toFixed(2)}</div></div>
     <div class="summary-box"><div class="label">Invertido en Cartera (no cuenta en rentabilidad)</div><div class="value">$${investCartera.toFixed(2)}</div></div>
+    <div class="summary-box"><div class="label">Invertido en Lotes (sin desglosar)</div><div class="value">$${investLotes.toFixed(2)}</div></div>
     <div class="summary-box"><div class="label">Cartas vendidas</div><div class="value">${vendidasCompras} / ${DATA.Compras.length}</div></div>
     <div class="summary-box"><div class="label">Plata ganada TOTAL (Venta - Compra)</div><div class="value">$${rentCompras.toFixed(2)}</div></div>
     <div class="summary-box"><div class="label">Rentabilidad promedio</div><div class="value">${rentabPromedio!==null ? rentabPromedio.toFixed(1)+"%" : "—"}</div></div>

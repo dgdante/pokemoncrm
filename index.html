@@ -610,14 +610,24 @@
 <option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select></div>
         <div><label>URL PriceCharting (opcional)</label><input id="ca-url-pc" placeholder="https://www.pricecharting.com/..." autocomplete="off"></div>
         <div><label>URL TCGPlayer (opcional)</label><input id="ca-url-tcg" placeholder="https://www.tcgplayer.com/..." autocomplete="off"></div>
+        <div><label>Propietario</label><select id="ca-propietario" autocomplete="off">
+<option value="" selected disabled>Seleccionar...</option>
+<option>Dante</option><option>Antonio</option></select></div>
       </div>
       <button class="primary" id="btn-cartera" onclick="addCartera()">Guardar ítem</button>
     </div>
     <div class="card">
-      <h3>Listado de cartera</h3>
+      <div class="list-head">
+        <h3>Listado de cartera</h3>
+        <select id="ca-filtro-propietario" class="search-inline" style="max-width:180px" onchange="renderCartera()">
+          <option value="">Todos (Dante + Antonio)</option>
+          <option value="Dante">Solo Dante</option>
+          <option value="Antonio">Solo Antonio</option>
+        </select>
+      </div>
       <div class="table-wrap"><table id="tabla-cartera"><thead><tr>
         <th></th><th>Código</th><th>Categoría</th><th>Fecha</th><th>Producto</th><th>Cant.</th>
-        <th>Grading</th><th>Compra (USD)</th><th>Actual (USD)</th><th>Pago con</th>
+        <th>Grading</th><th>Compra (USD)</th><th>Actual (USD)</th><th>Pago con</th><th>Propietario</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -1124,7 +1134,8 @@ async function addCartera() {
     PrecioActual: parseFloat(document.getElementById("ca-precioactual").value) || 0,
     Tarjeta: document.getElementById("ca-pagocon").value,
     URLPriceCharting: document.getElementById("ca-url-pc").value,
-    URLTCGPlayer: document.getElementById("ca-url-tcg").value
+    URLTCGPlayer: document.getElementById("ca-url-tcg").value,
+    Propietario: document.getElementById("ca-propietario").value
   };
   DATA.Cartera.push(data);
   renderCartera(); renderTarjetas();
@@ -1155,8 +1166,12 @@ async function deleteCartera(id) {
 function renderCartera() {
   const tbody = document.querySelector("#tabla-cartera tbody");
   tbody.innerHTML = "";
+  const filtroProp = document.getElementById("ca-filtro-propietario")?.value || "";
+  const lista = filtroProp ? DATA.Cartera.filter(c => c.Propietario === filtroProp) : DATA.Cartera;
+
   let totales = {};
-  DATA.Cartera.forEach(c => {
+  let totalDante = 0, totalAntonio = 0, totalOtros = 0;
+  lista.forEach(c => {
     const compra = parseFloat(c.PrecioCompra) || 0;
     const actual = c.PrecioActual !== undefined && c.PrecioActual !== "" ? parseFloat(c.PrecioActual) : null;
     tbody.innerHTML += `<tr>
@@ -1164,16 +1179,33 @@ function renderCartera() {
       <td>${c.Codigo}</td><td>${c.Categoria||""}</td><td>${c.FechaCompra||""}</td>
       <td>${c.NombreProducto||""}</td><td>${c.Cantidad||""}</td><td>${c.GradingEstado||""}</td>
       <td>$${compra.toFixed(2)}</td><td>${actual!==null ? "$"+actual.toFixed(2) : ""}</td><td>${c.Tarjeta||""}</td>
+      <td>${c.Propietario||""}</td>
     </tr>`;
     const cat = c.Categoria || "Sin categoría";
     totales[cat] = (totales[cat]||0) + compra;
   });
+
+  // Los totales por propietario siempre son sobre TODO (sin importar el filtro de la tabla),
+  // para que siempre veas el panorama completo de ambos.
+  DATA.Cartera.forEach(c => {
+    const compra = parseFloat(c.PrecioCompra) || 0;
+    if (c.Propietario === "Dante") totalDante += compra;
+    else if (c.Propietario === "Antonio") totalAntonio += compra;
+    else totalOtros += compra;
+  });
+
   const totalGeneral = Object.values(totales).reduce((a,b)=>a+b, 0);
   const div = document.getElementById("cartera-summary");
-  let html = `<div class="summary-box"><div class="label">Invertido TOTAL</div><div class="value">$${totalGeneral.toFixed(2)}</div></div>`;
+  let html = `<div class="summary-box"><div class="label">Invertido TOTAL (mostrado)</div><div class="value">$${totalGeneral.toFixed(2)}</div></div>`;
   Object.keys(totales).forEach(cat => {
     html += `<div class="summary-box"><div class="label">${cat}</div><div class="value">$${totales[cat].toFixed(2)}</div></div>`;
   });
+  html += `<div class="summary-box"><div class="label">Dante — Invertido</div><div class="value">$${totalDante.toFixed(2)}</div></div>`;
+  html += `<div class="summary-box"><div class="label">Antonio — Invertido</div><div class="value">$${totalAntonio.toFixed(2)}</div></div>`;
+  if (totalOtros > 0) {
+    html += `<div class="summary-box"><div class="label">Sin propietario asignado</div><div class="value">$${totalOtros.toFixed(2)}</div></div>`;
+  }
+  html += `<div class="summary-box"><div class="label">Ambos combinados</div><div class="value">$${(totalDante+totalAntonio+totalOtros).toFixed(2)}</div></div>`;
   div.innerHTML = html;
 }
 

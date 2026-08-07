@@ -68,6 +68,8 @@
   .dup-btn:hover { color: #b87c00; }
   .link-btn { background: none; border: none; color: var(--navy-light); font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
   .link-btn:hover { color: var(--navy); }
+  .move-btn { background: none; border: none; color: #6B46C1; font-weight: bold; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+  .move-btn:hover { color: #4c2f8c; }
   .cobro-btn { background: none; border: 1px solid var(--gold); color: var(--gold); font-weight: bold; font-size: 0.85rem; cursor: pointer; padding: 2px 8px; border-radius: 4px; }
   .cobro-btn:hover { background: #FEF5E7; }
   tr.fila-pendiente { background: #FDEDEC !important; }
@@ -677,6 +679,38 @@
       </div>
     </div>
   </div>
+
+  <!-- Popup de mover una compra a Cartera -->
+  <div id="mover-cartera-overlay" class="modal-overlay hidden">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-head">
+        <h3>Mover a Cartera</h3>
+        <button class="modal-close" onclick="cerrarMoverACarteraModal()">✕</button>
+      </div>
+      <p id="mover-cartera-info" style="font-size:0.85rem;color:var(--navy-light);margin-top:-6px"></p>
+      <p style="font-size:0.8rem;color:var(--navy-light)">
+        Sale de Compras (deja de contar como inversión "para vender") y pasa a Cartera. El gasto sigue estando controlado igual en Tarjetas.
+      </p>
+      <div class="form-grid">
+        <div><label>Categoría en Cartera</label>
+          <select id="mc-categoria" autocomplete="off">
+            <option value="" selected disabled>Seleccionar...</option>
+            <option>Producto Sellado</option><option>Carta Gradeada</option><option>Carta Valiosa (No Gradeada)</option>
+          </select>
+        </div>
+        <div><label>Propietario</label>
+          <select id="mc-propietario" autocomplete="off">
+            <option value="" selected disabled>Seleccionar...</option>
+            <option>Dante</option><option>Antonio</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="primary" style="margin-top:0" onclick="confirmarMoverACartera()">Mover a Cartera</button>
+        <button class="secondary" onclick="cerrarMoverACarteraModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -804,6 +838,74 @@ function duplicateCompra(id) {
   document.getElementById("c-url-tcg").value = c.URLTCGPlayer || "";
   toggleGraded();
   document.getElementById("compra-modal-overlay").classList.remove("hidden");
+}
+
+/* ---------- Mover una compra a Cartera ---------- */
+let moverACarteraId = null;
+
+function abrirMoverACarteraModal(id) {
+  const c = DATA.Compras.find(x => x.ID === id);
+  if (!c) return;
+  moverACarteraId = id;
+  document.getElementById("mover-cartera-info").textContent =
+    `${c.NombrePokemon || ""} — ${c.Expansion || ""} (comprada a $${Number(c.PrecioCompra||0).toFixed(2)})`;
+  document.getElementById("mc-categoria").value = c.Graded === "Si" ? "Carta Gradeada" : "Carta Valiosa (No Gradeada)";
+  document.getElementById("mc-propietario").value = "";
+  document.getElementById("mover-cartera-overlay").classList.remove("hidden");
+}
+function cerrarMoverACarteraModal() {
+  moverACarteraId = null;
+  document.getElementById("mover-cartera-overlay").classList.add("hidden");
+}
+
+async function confirmarMoverACartera() {
+  const id = moverACarteraId;
+  const c = DATA.Compras.find(x => x.ID === id);
+  if (!c) return;
+  const categoria = document.getElementById("mc-categoria").value;
+  const propietario = document.getElementById("mc-propietario").value;
+  if (!categoria || !propietario) {
+    alert("Elegí categoría y propietario antes de mover la carta.");
+    return;
+  }
+
+  const nuevoId = newId();
+  const nuevoCodigo = nextCode("CAR", DATA.Cartera);
+  const nombreCompleto = [c.NombrePokemon, c.TipoCarta, c.NumeroCarta ? `#${c.NumeroCarta}` : ""].filter(Boolean).join(" ");
+  const gradingTxt = c.Graded === "Si" ? `${c.EmpresaGradeadora||""} ${c.Calificacion||""}`.trim() : "";
+  const nuevoItem = {
+    ID: nuevoId,
+    Codigo: nuevoCodigo,
+    Categoria: categoria,
+    FechaCompra: c.FechaCompra || "",
+    NombreProducto: nombreCompleto,
+    Expansion: c.Expansion || "",
+    Cantidad: 1,
+    GradingEstado: gradingTxt,
+    PrecioCompra: parseFloat(c.PrecioCompra) || 0,
+    PrecioActual: "",
+    Tarjeta: c.Tarjeta || "",
+    URLPriceCharting: c.URLPriceCharting || "",
+    URLTCGPlayer: c.URLTCGPlayer || "",
+    Propietario: propietario
+  };
+
+  DATA.Cartera.push(nuevoItem);
+  DATA.Compras = DATA.Compras.filter(x => x.ID !== id);
+  cerrarMoverACarteraModal();
+  renderAll();
+
+  try {
+    await postSheet("Cartera", "add", nuevoItem);
+    await postSheet("Compras", "delete", null, id);
+    await safeRefresh("Cartera", "Cartera");
+    await safeRefresh("Compras", "Compras");
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión al mover la carta. Quedó movida en pantalla, pero revisá la planilla para confirmar que se aplicó en ambas hojas.");
+  } finally {
+    renderAll();
+  }
 }
 
 function checkConfig() {
@@ -1105,7 +1207,7 @@ function renderCompras() {
     const diasEnVenta = venta ? diasEntreFechas(c.FechaCompra, venta.FechaVenta) : null;
     const gradedTxt = c.Graded === "Si" ? `Sí (${c.EmpresaGradeadora||""} ${c.Calificacion||""})` : "No";
     tbody.innerHTML += `<tr>
-      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button><button class="dup-btn" onclick="duplicateCompra('${c.ID}')">⧉</button>${botonesPrecio(c)}` : ""}</td>
+      <td>${c.ID ? `<button class="del-btn" onclick="deleteCompra('${c.ID}')">✕</button><button class="edit-btn" onclick="editCompra('${c.ID}')">✎</button><button class="dup-btn" onclick="duplicateCompra('${c.ID}')">⧉</button>${!venta ? `<button class="move-btn" onclick="abrirMoverACarteraModal('${c.ID}')" title="Mover a Cartera">📦</button>` : ""}${botonesPrecio(c)}` : ""}</td>
       <td>${c.Codigo}</td><td>${formatDateDisplay(c.FechaCompra)}</td><td>${venta ? "" : (c.EstadoEnvio||"")}</td><td>${c.NombrePokemon||""}</td>
       <td>${c.TipoCarta||""}</td><td>${c.Idioma||""}</td><td>${c.Expansion||""}</td>
       <td>${c.NumeroCarta||""}</td><td>${gradedTxt}</td><td>$${compra.toFixed(2)}</td><td>${c.Tarjeta||""}</td>

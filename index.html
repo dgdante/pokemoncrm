@@ -996,8 +996,24 @@ async function loadAll() {
   if (pagosSinId.length) partes.push(`Pagos: ${pagosSinId.length}`);
   if (eventosSinId.length) partes.push(`Subastas: ${eventosSinId.length}`);
   if (lotesSinId.length) partes.push(`Lotes: ${lotesSinId.length}`);
+
+  const avisos = [];
   if (partes.length > 0) {
-    showAppWarning(`Filas sin ID (por eso no tienen botón de editar/borrar) — ${partes.join(" | ")}. En Apps Script, elegí "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶).`);
+    avisos.push(`Filas sin ID (por eso no tienen botón de editar/borrar) — ${partes.join(" | ")}. En Apps Script, elegí "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶).`);
+  }
+
+  const codigosDuplicados = (lista, nombreHoja) => {
+    const conteo = {};
+    lista.forEach(item => { if (item.Codigo) conteo[item.Codigo] = (conteo[item.Codigo]||0) + 1; });
+    const repetidos = Object.keys(conteo).filter(cod => conteo[cod] > 1);
+    if (repetidos.length) avisos.push(`⚠️ Código(s) repetido(s) en ${nombreHoja}: ${repetidos.join(", ")} — dos filas distintas tienen el mismo código. Andá a la planilla de Google Sheets y cambiale el código a mano a una de las dos (usá uno que no exista todavía).`);
+  };
+  codigosDuplicados(DATA.Compras, "Compras");
+  codigosDuplicados(DATA.Cartera, "Cartera");
+  codigosDuplicados(DATA.Lotes, "Lotes");
+
+  if (avisos.length > 0) {
+    showAppWarning(avisos.join(" || "));
   }
 
   renderAll();
@@ -1009,7 +1025,17 @@ function showAppWarning(msg) {
   div.style.display = "block";
 }
 function renderAll() { renderCompras(); renderCartera(); renderVentas(); renderTarjetas(); renderResumen(); renderLotes(); }
-function nextCode(prefix, list) { return prefix + "-" + String(list.length + 1).padStart(3, "0"); }
+function nextCode(prefix, list) {
+  let max = 0;
+  list.forEach(item => {
+    const m = String(item.Codigo || "").match(new RegExp("^" + prefix + "-(\\d+)$"));
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) max = n;
+    }
+  });
+  return prefix + "-" + String(max + 1).padStart(3, "0");
+}
 function findVenta(codigo) { return DATA.Subastas.find(s => s.Codigo === codigo); }
 function setBusy(btnId, busy, label) {
   const b = document.getElementById(btnId); b.disabled = busy; b.textContent = busy ? "Guardando..." : label;
@@ -1312,7 +1338,17 @@ function renderCartera() {
 }
 
 /* ---------- LOTES (compras en bloque, sin desglosar) ---------- */
-function nextLoteCode() { return "L-" + (DATA.Lotes.length + 1); }
+function nextLoteCode() {
+  let max = 0;
+  DATA.Lotes.forEach(l => {
+    const m = String(l.Codigo || "").match(/^L-(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) max = n;
+    }
+  });
+  return "L-" + (max + 1);
+}
 
 async function addLote() {
   const id = newId();

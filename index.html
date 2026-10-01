@@ -157,7 +157,7 @@
         <div><label>Estado envío</label>
           <select id="c-envio" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
-<option>En Tránsito</option><option>UK</option><option>Casa</option></select>
+<option>En Tránsito</option><option>UK</option><option>Casa</option><option>Colección</option></select>
         </div>
         <div><label>Nombre Pokémon</label><input id="c-nombre" placeholder="Charizard" autocomplete="off"></div>
         <div><label>Tipo de carta</label>
@@ -301,6 +301,8 @@
 <option>Perfect Order (2026)</option>
 <option>Chaos Rising (2026)</option>
 <option>Pitch Black (2026)</option>
+<option>30th Celebration (2026)</option>
+<option>Delta Reign (2026)</option>
 </select></div>
         <div><label>N° de carta</label><input id="c-numero" autocomplete="off"></div>
         <div><label>Graded</label>
@@ -344,6 +346,7 @@
             <option value="En Tránsito">En Tránsito</option>
             <option value="UK">UK</option>
             <option value="Casa">Casa</option>
+            <option value="Colección">Colección</option>
           </select>
           <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
           <button class="secondary" style="margin-top:0" onclick="generarReporteWord()">📄 Reporte (Word)</button>
@@ -602,6 +605,8 @@
 <option>Perfect Order (2026)</option>
 <option>Chaos Rising (2026)</option>
 <option>Pitch Black (2026)</option>
+<option>30th Celebration (2026)</option>
+<option>Delta Reign (2026)</option>
 </select></div>
         <div><label>Cantidad</label><input type="number" id="ca-cantidad" value="1" autocomplete="off"></div>
         <div><label>Grading / Estado</label><input id="ca-grading" placeholder="PSA 10 / Booster Box..." autocomplete="off"></div>
@@ -1685,11 +1690,12 @@ function renderTarjetas() {
 
 /* ---------- RESUMEN (solo Compras/Ventas; Cartera no suma acá) ---------- */
 function renderResumen() {
-  const investCompras = DATA.Compras.reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
+  const investCompras = DATA.Compras.filter(c => c.EstadoEnvio !== "Colección").reduce((a,c)=>a+(parseFloat(c.PrecioCompra)||0),0);
   let rentCompras = 0, vendidasCompras = 0, totalVendido = 0;
   let sumaRentabPct = 0, cantRentabPct = 0;
   let sumaDias = 0, cantDias = 0;
   DATA.Compras.forEach(c => {
+    if (c.EstadoEnvio === "Colección") return; // es para colección personal, no cuenta en el negocio
     const v = findVenta(c.Codigo);
     if (!v) return;
     vendidasCompras++;
@@ -1730,8 +1736,8 @@ function renderStockPorExpansion() {
   const div = document.getElementById("stock-expansion");
   if (!div) return;
 
-  // Solo stock disponible: cartas de Compras que todavía NO tienen venta registrada
-  const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo));
+  // Solo stock disponible para vender: no vendidas y que no sean para colección personal
+  const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo) && c.EstadoEnvio !== "Colección");
 
   const porExpansion = {};
   disponibles.forEach(c => {

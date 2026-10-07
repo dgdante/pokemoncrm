@@ -108,7 +108,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v15 · 2026-07-08</span></h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v17 · 2026-10-07</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -673,10 +673,11 @@
         <button class="modal-close" onclick="cerrarCobroModal()">✕</button>
       </div>
       <p id="cobro-info" style="font-size:0.85rem;color:var(--navy-light);margin-top:-6px"></p>
+      <div id="cobro-saldo" style="font-weight:bold;font-size:1.05rem;padding:8px 12px;border-radius:8px;margin:8px 0;text-align:center"></div>
       <button class="primary" style="margin-top:6px" onclick="marcarCobro100()">✓ Pagó el 100%</button>
       <div style="margin-top:14px">
         <label>O ingresá el monto cancelado hasta ahora (USD)</label>
-        <input type="number" id="cobro-monto" step="0.01" autocomplete="off">
+        <input type="number" id="cobro-monto" step="0.01" autocomplete="off" oninput="actualizarSaldoCobro()">
       </div>
       <div class="modal-actions">
         <button class="primary" style="margin-top:0" onclick="guardarCobro()">Guardar monto</button>
@@ -963,10 +964,29 @@ async function safeRefresh(sheetKey, sheetName) {
   return true;
 }
 
+async function cargarTodoConReintento() {
+  let all = await fetchSheet("ALL");
+  if (all && !all.error) return all;
+  // Un solo fallo puede ser pasajero (red, Google ocupado): reintentamos una vez antes de alarmar
+  await new Promise(r => setTimeout(r, 1500));
+  all = await fetchSheet("ALL");
+  if (all && !all.error) return all;
+  return null;
+}
+
+async function diagnosticarBackend() {
+  const v = await fetchSheet("VERSION");
+  if (v && !v.error && v.version) {
+    return `El Apps Script responde (versión ${v.version}), pero falló la carga combinada de las hojas. Puede ser algo puntual de Google: probá recargar la página. Si se repite, abrí tu URL de Apps Script agregando ?sheet=ALL en otra pestaña y fijate qué mensaje aparece.`;
+  }
+  return "No pude comunicarme bien con tu Apps Script (no responde o es una versión vieja). Verificá que la URL del index.html sea la de tu implementación activa y, si actualizaste el Code.gs, que hayas hecho Nueva versión → Implementar.";
+}
+
 async function loadAll() {
   if (!checkConfig()) return;
-  const all = await fetchSheet("ALL");
-  if (all && !all.error) {
+  let avisoBackend = null;
+  const all = await cargarTodoConReintento();
+  if (all) {
     DATA.Compras = all.Compras || [];
     DATA.Cartera = all.Cartera || [];
     DATA.Subastas = all.Subastas || [];
@@ -974,9 +994,9 @@ async function loadAll() {
     DATA.SubastasEventos = all.SubastasEventos || [];
     DATA.Lotes = all.Lotes || [];
   } else {
-    // Respaldo por si el Apps Script todavía no tiene el modo "ALL" (versión vieja sin actualizar)
-    console.warn("Carga combinada falló, probando hoja por hoja...");
-    showAppWarning("Tu Apps Script parece estar en una versión vieja (no reconoce la carga combinada). Actualizalo: pegá el Code.gs más reciente en Apps Script y hacé Nueva versión → Implementar.");
+    // Respaldo: probamos hoja por hoja y diagnosticamos qué pasa con el backend
+    console.warn("Carga combinada falló dos veces, probando hoja por hoja...");
+    avisoBackend = await diagnosticarBackend();
     const [compras, cartera, subastas, pagos, eventos, lotes] = await Promise.all([
       fetchSheet("Compras"), fetchSheet("Cartera"), fetchSheet("Subastas"), fetchSheet("Pagos"), fetchSheet("SubastasEventos"), fetchSheet("Lotes")
     ]);
@@ -1003,6 +1023,7 @@ async function loadAll() {
   if (lotesSinId.length) partes.push(`Lotes: ${lotesSinId.length}`);
 
   const avisos = [];
+  if (avisoBackend) avisos.push(avisoBackend);
   if (partes.length > 0) {
     avisos.push(`Filas sin ID (por eso no tienen botón de editar/borrar) — ${partes.join(" | ")}. En Apps Script, elegí "repararIDsAhora" en el desplegable de arriba y tocá Ejecutar (▶).`);
   }
@@ -1504,6 +1525,15 @@ async function deleteVenta(id) {
 
 /* ---------- Cobro de ventas ---------- */
 let cobroVentaId = null;
+function actualizarSaldoCobro() {
+  const s = DATA.Subastas.find(x => x.ID === cobroVentaId); if (!s) return;
+  const precio = parseFloat(s.PrecioVenta) || 0;
+  const monto = parseFloat(document.getElementById("cobro-monto").value) || 0;
+  const falta = Math.max(precio - monto, 0);
+  const el = document.getElementById("cobro-saldo");
+  if (falta <= 0.004) { el.textContent = "✓ Cobrada por completo"; el.style.background = "#d4edda"; el.style.color = "#155724"; }
+  else { el.textContent = `Falta cobrar: $${falta.toFixed(2)}`; el.style.background = "#f8d7da"; el.style.color = "#721c24"; }
+}
 
 function abrirCobroModal(id) {
   const s = DATA.Subastas.find(x => x.ID === id);
@@ -1513,6 +1543,7 @@ function abrirCobroModal(id) {
   const cobradoActual = s.MontoCobrado !== undefined && s.MontoCobrado !== "" ? parseFloat(s.MontoCobrado) : 0;
   document.getElementById("cobro-info").textContent = `Venta por $${precio.toFixed(2)}. Cobrado hasta ahora: $${cobradoActual.toFixed(2)}.`;
   document.getElementById("cobro-monto").value = cobradoActual || "";
+  actualizarSaldoCobro();
   document.getElementById("cobro-modal-overlay").classList.remove("hidden");
 }
 function cerrarCobroModal() {

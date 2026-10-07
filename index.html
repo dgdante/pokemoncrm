@@ -108,7 +108,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v17 · 2026-10-07</span></h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v18 · 2026-10-07</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -1629,9 +1629,19 @@ function renderVentas() {
     </tr>`;
   });
 
+  let totalPorCobrar = 0, cantPorCobrar = 0, totalCobrado = 0;
+  DATA.Subastas.forEach(v => {
+    const pr = parseFloat(v.PrecioVenta) || 0;
+    const co = (v.MontoCobrado !== undefined && v.MontoCobrado !== "") ? (parseFloat(v.MontoCobrado) || 0) : 0;
+    totalCobrado += Math.min(co, pr);
+    const f = pr - co;
+    if (f > 0.004) { totalPorCobrar += f; cantPorCobrar++; }
+  });
+  const colPend = totalPorCobrar > 0.004 ? "#c0392b" : "#27ae60";
   const promDiv = document.getElementById("ventas-promedios");
   if (promDiv) {
     promDiv.innerHTML = `
+      <div class="summary-box" style="border:2px solid ${colPend}"><div class="label">💰 SALDO PENDIENTE DE COBRO</div><div class="value" style="color:${colPend}">$${totalPorCobrar.toFixed(2)}</div><div class="label">${cantPorCobrar} venta${cantPorCobrar===1?"":"s"} con saldo · Ya cobrado: $${totalCobrado.toFixed(2)}</div></div>
       <div class="summary-box"><div class="label">Ventas totales</div><div class="value">${DATA.Subastas.length}</div></div>
       <div class="summary-box"><div class="label">Plata ganada TOTAL</div><div class="value">$${sumaGanancia.toFixed(2)}</div></div>
       <div class="summary-box"><div class="label">Rentabilidad promedio</div><div class="value">${cantRentabPct ? (sumaRentabPct/cantRentabPct).toFixed(1)+"%" : "\u2014"}</div></div>

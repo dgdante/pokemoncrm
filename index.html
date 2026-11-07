@@ -108,7 +108,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v21 · 2026-10-24</span></h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v22 · 2026-11-07</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -321,7 +321,7 @@
         <div><label>Pago con</label>
           <select id="c-pagocon" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
-<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>Matías USA</option><option>EFT</option></select>
         </div>
         <div><label>Canal de compra</label><input id="c-canal" placeholder="EBAY" autocomplete="off"></div>
         <div><label>URL PriceCharting (opcional)</label><input id="c-url-pc" placeholder="https://www.pricecharting.com/..." autocomplete="off"></div>
@@ -371,7 +371,7 @@
         <div><label>Monto de compra (USD)</label><input type="number" id="l-monto" step="0.01" autocomplete="off"></div>
         <div><label>Vendedor</label><input id="l-vendedor" placeholder="A quién se lo compraste" autocomplete="off"></div>
         <div><label>Pago con</label>
-          <select id="l-pagocon" autocomplete="off"><option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select>
+          <select id="l-pagocon" autocomplete="off"><option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>Matías USA</option><option>EFT</option></select>
         </div>
         <div><label>Notas</label><input id="l-notas" autocomplete="off"></div>
       </div>
@@ -441,7 +441,7 @@
         <div><label>Fecha de pago</label><input type="date" id="p-fecha" autocomplete="off"></div>
         <div><label>Pago con</label><select id="p-tarjeta" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
-<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select></div>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>Matías USA</option><option>EFT</option></select></div>
         <div><label>Monto pagado (USD)</label><input type="number" id="p-monto" step="0.01" autocomplete="off"></div>
         <div><label>Notas</label><input id="p-notas" autocomplete="off"></div>
       </div>
@@ -614,7 +614,7 @@
         <div><label>Precio actual (USD)</label><input type="number" id="ca-precioactual" step="0.01" autocomplete="off"></div>
         <div><label>Pago con</label><select id="ca-pagocon" autocomplete="off">
 <option value="" selected disabled>Seleccionar...</option>
-<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>EFT</option></select></div>
+<option>Marian UK</option><option>Costi MasterCard</option><option>Costi Platinum</option><option>Matías USA</option><option>EFT</option></select></div>
         <div><label>URL PriceCharting (opcional)</label><input id="ca-url-pc" placeholder="https://www.pricecharting.com/..." autocomplete="off"></div>
         <div><label>URL TCGPlayer (opcional)</label><input id="ca-url-tcg" placeholder="https://www.tcgplayer.com/..." autocomplete="off"></div>
         <div><label>Propietario</label><select id="ca-propietario" autocomplete="off">
@@ -725,7 +725,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxxfvR86YyBkJizmFDVS51W
 /* ============================== */
 
 let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [], SubastasEventos: [], Lotes: [] };
-const CARDS = ["Marian UK", "Costi MasterCard", "Costi Platinum", "EFT"];
+const CARDS = ["Marian UK", "Costi MasterCard", "Costi Platinum", "Matías USA", "EFT"];
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {

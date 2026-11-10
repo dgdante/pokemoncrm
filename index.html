@@ -108,7 +108,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v22 · 2026-11-07</span></h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v23 · 2026-11-10</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -341,6 +341,7 @@
       <div class="list-head">
         <h3>Listado de compras</h3>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <button id="btn-ocultar-vendidas" class="secondary" style="margin-top:0" onclick="toggleOcultarVendidas()">🙈 Ocultar vendidas</button>
           <select id="c-filtro-envio" class="search-inline" style="max-width:160px" onchange="renderCompras()">
             <option value="">Todos los envíos</option>
             <option value="En Tránsito">En Tránsito</option>
@@ -351,6 +352,16 @@
           <input id="c-buscar" class="search-inline" placeholder="🔍 Buscar por nombre o expansión..." autocomplete="off" oninput="renderCompras()">
           <button class="secondary" style="margin-top:0" onclick="generarReporteWord()">📄 Reporte (Word)</button>
         </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px">
+        <select id="c-f-pago" class="search-inline" style="max-width:170px" onchange="renderCompras()"><option value="">Todos los pagos</option></select>
+        <select id="c-f-exp" class="search-inline" style="max-width:190px" onchange="renderCompras()"><option value="">Todas las expansiones</option></select>
+        <select id="c-f-tipo" class="search-inline" style="max-width:150px" onchange="renderCompras()"><option value="">Todos los tipos</option></select>
+        <select id="c-f-idioma" class="search-inline" style="max-width:150px" onchange="renderCompras()"><option value="">Todos los idiomas</option></select>
+        <select id="c-f-graded" class="search-inline" style="max-width:150px" onchange="renderCompras()"><option value="">Graded: todos</option><option value="Si">Graded: Sí</option><option value="No">Graded: No</option></select>
+        <select id="c-f-estado" class="search-inline" style="max-width:150px" onchange="renderCompras()"><option value="">Todos los estados</option><option value="Disponible">Disponibles</option><option value="Vendido">Vendidas</option></select>
+        <select id="c-f-canal" class="search-inline" style="max-width:170px" onchange="renderCompras()"><option value="">Todos los canales</option></select>
+        <button class="secondary" style="margin-top:0" onclick="limpiarFiltrosCompras()">✕ Limpiar filtros</button>
       </div>
       <div class="table-wrap tall"><table id="tabla-compras"><thead><tr>
         <th></th><th>Código</th><th>Fecha</th><th>Envío</th><th>Pokémon</th><th>Tipo</th><th>Idioma</th><th>Expansión</th>
@@ -725,6 +736,21 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxxfvR86YyBkJizmFDVS51W
 /* ============================== */
 
 let DATA = { Compras: [], Cartera: [], Subastas: [], Pagos: [], SubastasEventos: [], Lotes: [] };
+const RECARGO_TARJETA = { "Matías USA": 0.035 };
+function conRecargo(tarjeta, monto, tarjetaPrevia) {
+  const r = RECARGO_TARJETA[tarjeta];
+  if (!r || tarjetaPrevia === tarjeta) return monto; // sin recargo, o ya lo tenía aplicado (edición)
+  return Math.round(monto * (1 + r) * 100) / 100;
+}
+function actualizarHintRecargo(selId) {
+  const sel = document.getElementById(selId); if (!sel) return;
+  let h = document.getElementById("hint-" + selId);
+  if (!h) { h = document.createElement("small"); h.id = "hint-" + selId; h.style.cssText = "display:block;color:#b45309;margin-top:3px"; sel.insertAdjacentElement("afterend", h); }
+  const r = RECARGO_TARJETA[sel.value];
+  const previa = (selId === "c-pagocon" && editingCompraId) ? (DATA.Compras.find(c => c.ID === editingCompraId) || {}).Tarjeta : null;
+  h.textContent = r && previa !== sel.value ? `Se suma ${(r*100).toFixed(1)}% de recargo al precio al guardar` : "";
+}
+["c-pagocon","l-pagocon","ca-pagocon"].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener("change", () => actualizarHintRecargo(id)); });
 const CARDS = ["Marian UK", "Costi MasterCard", "Costi Platinum", "Matías USA", "EFT"];
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -817,7 +843,7 @@ function editCompra(id) {
   document.getElementById("c-canal").value = c.CanalCompra || "";
   document.getElementById("c-url-pc").value = c.URLPriceCharting || "";
   document.getElementById("c-url-tcg").value = c.URLTCGPlayer || "";
-  toggleGraded();
+  toggleGraded(); actualizarHintRecargo("c-pagocon");
   document.getElementById("compra-modal-overlay").classList.remove("hidden");
 }
 
@@ -837,12 +863,12 @@ function duplicateCompra(id) {
   document.getElementById("c-graded").value = c.Graded || "";
   document.getElementById("c-calificacion").value = c.Calificacion || "";
   document.getElementById("c-empresa").value = c.EmpresaGradeadora || "";
-  document.getElementById("c-precio").value = c.PrecioCompra || "";
+  document.getElementById("c-precio").value = RECARGO_TARJETA[c.Tarjeta] ? (Math.round((parseFloat(c.PrecioCompra)||0) / (1 + RECARGO_TARJETA[c.Tarjeta]) * 100) / 100) : (c.PrecioCompra || "");
   document.getElementById("c-pagocon").value = c.Tarjeta || "";
   document.getElementById("c-canal").value = c.CanalCompra || "";
   document.getElementById("c-url-pc").value = c.URLPriceCharting || "";
   document.getElementById("c-url-tcg").value = c.URLTCGPlayer || "";
-  toggleGraded();
+  toggleGraded(); actualizarHintRecargo("c-pagocon");
   document.getElementById("compra-modal-overlay").classList.remove("hidden");
 }
 
@@ -1072,6 +1098,7 @@ async function addCompra() {
   const isEdit = !!editingCompraId;
   const id = isEdit ? editingCompraId : newId();
   const codigo = isEdit ? DATA.Compras.find(c => c.ID === id).Codigo : nextCode("C", DATA.Compras);
+  const tarjetaPrevia = isEdit ? DATA.Compras.find(c => c.ID === id).Tarjeta : null;
   const data = {
     ID: id, Codigo: codigo,
     FechaCompra: document.getElementById("c-fecha").value,
@@ -1084,12 +1111,13 @@ async function addCompra() {
     Graded: document.getElementById("c-graded").value,
     Calificacion: document.getElementById("c-graded").value === "Si" ? document.getElementById("c-calificacion").value : "",
     EmpresaGradeadora: document.getElementById("c-graded").value === "Si" ? document.getElementById("c-empresa").value : "",
-    PrecioCompra: parseFloat(document.getElementById("c-precio").value) || 0,
+    PrecioCompra: 0,
     Tarjeta: document.getElementById("c-pagocon").value,
     CanalCompra: document.getElementById("c-canal").value,
     URLPriceCharting: document.getElementById("c-url-pc").value,
     URLTCGPlayer: document.getElementById("c-url-tcg").value
   };
+  data.PrecioCompra = conRecargo(data.Tarjeta, parseFloat(document.getElementById("c-precio").value) || 0, tarjetaPrevia);
 
   const faltantes = [];
   if (!data.EstadoEnvio) faltantes.push("Estado envío");
@@ -1213,7 +1241,38 @@ function generarReporteWord() {
   URL.revokeObjectURL(url);
 }
 
+let ocultarVendidas = false;
+function toggleOcultarVendidas() {
+  ocultarVendidas = !ocultarVendidas;
+  const b = document.getElementById("btn-ocultar-vendidas");
+  if (b) b.textContent = ocultarVendidas ? "👁 Mostrar vendidas" : "🙈 Ocultar vendidas";
+  renderCompras();
+}
+const FILTROS_COMPRAS = [
+  ["c-f-pago", "c-pagocon", "Tarjeta"], ["c-f-exp", "c-expansion", "Expansion"], ["c-f-tipo", "c-tipo", "TipoCarta"],
+  ["c-f-idioma", "c-idioma", "Idioma"], ["c-f-canal", "c-canal", "CanalCompra"]
+];
+function poblarFiltroCanal() {
+  const f = document.getElementById("c-f-canal"); if (!f) return;
+  const actual = f.value;
+  const canales = [...new Set(DATA.Compras.map(c => (c.CanalCompra || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  f.innerHTML = '<option value="">Todos los canales</option>' + canales.map(v => `<option>${v.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</option>`).join("");
+  f.value = canales.includes(actual) ? actual : "";
+}
+function poblarFiltrosCompras() {
+  poblarFiltroCanal();
+  FILTROS_COMPRAS.forEach(([fid, srcId]) => {
+    const f = document.getElementById(fid), src = document.getElementById(srcId);
+    if (!f || !src || src.tagName !== "SELECT" || f.options.length > 1) return;
+    [...src.options].forEach(o => { const v = o.value || o.textContent; if (!o.disabled && v && !/^Seleccionar/.test(v)) f.add(new Option(v, v)); });
+  });
+}
+function limpiarFiltrosCompras() {
+  ["c-buscar","c-filtro-envio","c-f-pago","c-f-exp","c-f-tipo","c-f-idioma","c-f-graded","c-f-estado","c-f-canal"].forEach(i => { const el = document.getElementById(i); if (el) el.value = ""; });
+  if (ocultarVendidas) toggleOcultarVendidas(); else renderCompras();
+}
 function renderCompras() {
+  poblarFiltrosCompras();
   const tbody = document.querySelector("#tabla-compras tbody");
   tbody.innerHTML = "";
   const q = (document.getElementById("c-buscar")?.value || "").toLowerCase().trim();
@@ -1224,6 +1283,15 @@ function renderCompras() {
   if (filtroEnvio) {
     lista = lista.filter(c => c.EstadoEnvio === filtroEnvio && !findVenta(c.Codigo));
   }
+  FILTROS_COMPRAS.forEach(([fid, , campo]) => {
+    const v = document.getElementById(fid)?.value;
+    if (v) lista = lista.filter(c => (c[campo] || "") === v);
+  });
+  const fGraded = document.getElementById("c-f-graded")?.value;
+  if (fGraded) lista = lista.filter(c => fGraded === "Si" ? c.Graded === "Si" : c.Graded !== "Si");
+  const fEstado = document.getElementById("c-f-estado")?.value;
+  if (fEstado) lista = lista.filter(c => (findVenta(c.Codigo) ? "Vendido" : "Disponible") === fEstado);
+  if (ocultarVendidas) lista = lista.filter(c => !findVenta(c.Codigo));
   lista = [...lista].sort((a, b) => {
     if (!a.FechaCompra && !b.FechaCompra) return 0;
     if (!a.FechaCompra) return 1;   // sin fecha, siempre al final
@@ -1284,7 +1352,7 @@ async function addCartera() {
     Expansion: document.getElementById("ca-expansion").value,
     Cantidad: parseInt(document.getElementById("ca-cantidad").value) || 1,
     GradingEstado: document.getElementById("ca-grading").value,
-    PrecioCompra: parseFloat(document.getElementById("ca-precio").value) || 0,
+    PrecioCompra: conRecargo(document.getElementById("ca-pagocon").value, parseFloat(document.getElementById("ca-precio").value) || 0, null),
     PrecioActual: parseFloat(document.getElementById("ca-precioactual").value) || 0,
     Tarjeta: document.getElementById("ca-pagocon").value,
     URLPriceCharting: document.getElementById("ca-url-pc").value,
@@ -1383,7 +1451,7 @@ async function addLote() {
     ID: id,
     Codigo: codigo,
     FechaCompra: document.getElementById("l-fecha").value,
-    MontoCompra: parseFloat(document.getElementById("l-monto").value) || 0,
+    MontoCompra: conRecargo(document.getElementById("l-pagocon").value, parseFloat(document.getElementById("l-monto").value) || 0, null),
     Vendedor: document.getElementById("l-vendedor").value,
     Tarjeta: document.getElementById("l-pagocon").value,
     Notas: document.getElementById("l-notas").value

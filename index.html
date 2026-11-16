@@ -108,7 +108,7 @@
   <img src="banner.jpg" alt="Banner" onerror="this.parentElement.style.display='none'">
 </div>
 <header>
-  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v24 · 2026-11-16</span></h1>
+  <h1>CRM POKÉMON <span style="font-size:0.6rem;opacity:0.6;font-weight:normal">v26 · 2026-11-16</span></h1>
   <p>Compras · Ventas · Tarjetas · Cartera — sincronizado con Google Sheets</p>
 </header>
 
@@ -664,6 +664,7 @@
       <p style="font-size:0.8rem;color:var(--navy-light);margin-top:-6px">
         Solo cuenta cartas disponibles (no vendidas). Se actualiza solo al cargar o vender una carta.
       </p>
+      <div style="font-size:0.75rem;color:var(--navy-light);margin-bottom:6px">💰 A la izquierda de cada set: USD invertidos en stock</div>
       <div class="stock-legend">
         <span><i style="background:#2E86DE"></i>Unlimited</span>
         <span><i style="background:#F1C40F"></i>Holo</span>
@@ -1849,11 +1850,18 @@ function renderStockPorExpansion() {
   const disponibles = DATA.Compras.filter(c => !findVenta(c.Codigo) && c.EstadoEnvio !== "Colección");
 
   const porExpansion = {};
+  const invertidoExp = {}, invertidoTipo = {};
+  let invertidoTotal = 0;
   disponibles.forEach(c => {
     const exp = c.Expansion || "Sin expansión";
     const tipo = c.TipoCarta || "Sin tipo";
+    const monto = parseFloat(c.PrecioCompra) || 0;
     if (!porExpansion[exp]) porExpansion[exp] = {};
     porExpansion[exp][tipo] = (porExpansion[exp][tipo] || 0) + 1;
+    invertidoExp[exp] = (invertidoExp[exp] || 0) + monto;
+    const k = exp + "||" + tipo;
+    invertidoTipo[k] = (invertidoTipo[k] || 0) + monto;
+    invertidoTotal += monto;
   });
 
   const entries = Object.entries(porExpansion)
@@ -1867,8 +1875,9 @@ function renderStockPorExpansion() {
 
   let html = "";
   entries.forEach(({ exp, tipos, total }) => {
-    html += `<div class="stock-row">
-      <div class="stock-label">${exp} — ${total}</div>
+    html += `<div class="stock-row" style="display:flex;gap:12px;align-items:center">
+      <div style="min-width:92px;text-align:right;font-weight:bold;color:var(--navy);font-size:0.95rem" title="Invertido en ${exp}">$${invertidoExp[exp].toFixed(2)}</div>
+      <div style="flex:1;min-width:0"><div class="stock-label">${exp} — ${total}</div>
       <div class="stock-bar">`;
     const tiposOrdenados = [...TIPO_ORDER, ...Object.keys(tipos).filter(t => !TIPO_ORDER.includes(t))];
     tiposOrdenados.forEach(tipo => {
@@ -1876,10 +1885,12 @@ function renderStockPorExpansion() {
       if (!count) return;
       const pct = (count / total * 100).toFixed(2);
       const color = TIPO_COLORS[tipo] || COLOR_OTRO;
-      html += `<div class="stock-seg" style="width:${pct}%; background:${color}" title="${tipo}: ${count}">${count}</div>`;
+      html += `<div class="stock-seg" style="width:${pct}%; background:${color}" title="${tipo}: ${count} · $${(invertidoTipo[exp + "||" + tipo] || 0).toFixed(2)} invertidos">${count}</div>`;
     });
-    html += `</div></div>`;
+    html += `</div></div></div>`;
   });
+  const totalCartas = entries.reduce((a, e) => a + e.total, 0);
+  html += `<div style="margin-top:14px;padding:10px 14px;border:2px solid var(--gold);border-radius:8px;font-weight:bold;color:var(--navy)">💰 Total invertido en stock: $${invertidoTotal.toFixed(2)} <span style="font-weight:normal">(${totalCartas} cartas)</span></div>`;
   div.innerHTML = html;
 }
 
